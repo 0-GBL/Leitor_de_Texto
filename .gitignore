@@ -1,0 +1,43 @@
+# Ferramentas internas
+.tools/
+
+# Compilação e distribuição
+**/bin/
+**/obj/
+artifacts/
+
+# Ambiente de desenvolvimento
+.vs/
+*.user
+*.suo
+
+# Banco de dados local
+*.db
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+*.sqlite-wal
+*.sqlite-shm
+
+# Inteligência artificial - Piper
+*.onnx
+.venv/
+venv/
+__pycache__/
+*.pyc
+
+# Arquivos temporários
+*.log
+*.tmp
+.cache/
+
+# Segurança e credenciais
+.env
+.env.*
+!.env.example
+
+# Arquivos do sistema operacional
+Thumbs.db
+Desktop.ini
+.DS_Store

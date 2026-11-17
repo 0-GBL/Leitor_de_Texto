@@ -1,0 +1,27 @@
+<Window x:Class="Leitor.SettingsWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+ Title="Configurações do Leitor" Width="560" Height="660" MinWidth="460" MinHeight="480" WindowStartupLocation="CenterOwner" FontFamily="Segoe UI" FontSize="14" Background="{DynamicResource BackgroundBrush}" Foreground="{DynamicResource TextBrush}">
+ <DockPanel Margin="24">
+  <TextBlock DockPanel.Dock="Top" Text="Configurações" FontSize="25" FontWeight="SemiBold" Margin="0,0,0,18"/>
+  <Button DockPanel.Dock="Bottom" Content="Concluído" Click="Done" HorizontalAlignment="Right" Margin="0,12,0,0"/>
+  <ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel>
+   <Border Background="{DynamicResource SurfaceBrush}" Padding="18" CornerRadius="10" Margin="0,0,0,12"><StackPanel>
+    <TextBlock Text="Aparência" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,12"/>
+    <Button Content="{Binding ThemeActionLabel}" Command="{Binding ToggleThemeCommand}" HorizontalAlignment="Left" AutomationProperties.Name="Alternar tema"/>
+    <TextBlock Text="{Binding Settings.FontSize, StringFormat=Tamanho do texto · {0:0}}" Margin="0,10,0,0"/>
+    <Slider Minimum="14" Maximum="32" TickFrequency="1" Value="{Binding Settings.FontSize}" ValueChanged="PreferenceChanged" AutomationProperties.Name="Tamanho da fonte"/>
+   </StackPanel></Border>
+   <Border Background="{DynamicResource SurfaceBrush}" Padding="18" CornerRadius="10" Margin="0,0,0,12"><StackPanel>
+    <TextBlock Text="Reprodução" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,8"/>
+    <CheckBox Content="Reproduzir em segundo plano" IsChecked="{Binding Settings.Background}" Click="PreferenceChanged" ToolTip="Continua ao minimizar ou trocar de janela. Fechar salva o progresso e encerra o aplicativo."/>
+    <CheckBox Content="Rolagem automática" IsChecked="{Binding Settings.AutoScroll}" Click="PreferenceChanged"/>
+   </StackPanel></Border>
+   <Border Background="{DynamicResource SurfaceBrush}" Padding="18" CornerRadius="10"><StackPanel>
+    <TextBlock Text="Privacidade e segurança" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,12"/>
+    <Button Content="Ativar / desativar PIN" Command="{Binding PinCommand}" HorizontalAlignment="Left"/>
+    <CheckBox Content="Solicitar PIN ao abrir o aplicativo" IsChecked="{Binding Settings.AppLock}" Click="AppLockChanged"/>
+    <Button Content="Proteger / desproteger este texto" Command="{Binding ProtectionCommand}" HorizontalAlignment="Left"/>
+    <TextBlock Text="{Binding ProtectionLabel}" Style="{StaticResource Caption}" TextWrapping="Wrap"/>
+   </StackPanel></Border>
+  </StackPanel></ScrollViewer>
+ </DockPanel>
+</Window>

@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType><TargetFramework>net10.0-windows</TargetFramework><UseWPF>true</UseWPF>
+    <AssemblyName>Leitor</AssemblyName><RootNamespace>Leitor</RootNamespace><Version>1.1.0</Version>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.15"/>
+    <PackageReference Include="System.Speech" Version="10.0.0"/>
+    <PackageReference Include="NAudio" Version="2.2.1"/>
+    <Content Include="../../runtime/piper_worker.py" Link="runtime/piper_worker.py" CopyToOutputDirectory="PreserveNewest"/>
+    <Content Include="../../runtime/check_piper.py" Link="runtime/check_piper.py" CopyToOutputDirectory="PreserveNewest"/>
+    <Content Include="../../runtime/piper-requirements.txt" Link="runtime/piper-requirements.txt" CopyToOutputDirectory="PreserveNewest"/>
+    <Content Include="../../scripts/Install-Piper.ps1" Link="runtime/Install-Piper.ps1" CopyToOutputDirectory="PreserveNewest"/>
+  </ItemGroup>
+</Project>
