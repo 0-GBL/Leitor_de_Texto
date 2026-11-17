@@ -16,7 +16,8 @@ public static partial class TextProcessor
             token.ThrowIfCancellationRequested();
             if (string.IsNullOrWhiteSpace(line.Value)) continue;
             string trimmed = line.Value.Trim();
-            bool heading = trimmed.StartsWith('#') || (trimmed.Length < 85 && !".!?;,:".Contains(trimmed[^1]));
+            bool list = !legacy && ListItem().IsMatch(trimmed);
+            bool heading = !list && (trimmed.StartsWith('#') || (trimmed.Length < 85 && !".!?;,:".Contains(trimmed[^1])));
             int start = line.Index, end = line.Index + line.Length, part = start;
             while (part < end)
             {
@@ -30,6 +31,8 @@ public static partial class TextProcessor
                         continue;
                     }
                     if (!".!?…".Contains(text[i])) continue;
+                    if (text[i] == '.' && i > start && char.IsDigit(text[i - 1]) &&
+                        text.AsSpan(start, i - start).Trim().IndexOfAnyExceptInRange('0', '9') < 0) continue;
                     int boundary = i + 1;
                     while (boundary < end && ".!?…\"'”’»)]}".Contains(text[boundary])) boundary++;
                     if ((boundary == end || char.IsWhiteSpace(text[boundary])) &&
@@ -56,11 +59,12 @@ public static partial class TextProcessor
         int p = dot - 1;
         while (p >= start && char.IsLetter(text[p])) p--;
         string word = text[(p + 1)..dot].ToLowerInvariant();
-        return word is "sr" or "sra" or "dr" or "dra" or "prof" or "profa" or "etc" or "ex" || word.Length == 1;
+        return word is "sr" or "sra" or "dr" or "dra" or "prof" or "profa" or "etc" or "ex" or "art" or "pág" or "págs" or "fig" or "vol" or "cap" or "av" or "obs" or "vs" || word.Length == 1;
     }
     [GeneratedRegex(@"[^\r\n]+", RegexOptions.CultureInvariant)] private static partial Regex Lines();
+    [GeneratedRegex(@"^(?:[-*•]\s+|\d+[.)]\s+)", RegexOptions.CultureInvariant)] private static partial Regex ListItem();
     public static double Estimate(Segment s, SpeechOptions o) => Math.Max(.3, s.Text.Length / (14.0 * o.Speed)) + Pause(s, o);
-    public static double Pause(Segment s, SpeechOptions o) => s.Heading ? o.HeadingPause : s.ParagraphEnd ? o.ParagraphPause : EndsSentence(s.Text) ? o.SentencePause : 0;
+    public static double Pause(Segment s, SpeechOptions o) => !s.ParagraphEnd && !EndsSentence(s.Text) ? 0 : s.Heading ? o.HeadingPause : s.ParagraphEnd ? o.ParagraphPause : o.SentencePause;
     public static bool EndsSentence(string text)
     {
         var end = text.AsSpan().TrimEnd();

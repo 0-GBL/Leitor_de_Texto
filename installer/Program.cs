@@ -5,6 +5,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using Microsoft.Win32;
+using Leitor.Security;
 
 namespace LeitorSetup;
 public static class Program
@@ -17,9 +18,10 @@ public static class Program
             {
                 using var stream = Assembly.GetExecutingAssembly().GetManifestResourceStream("Payload.zip")!;
                 using var zip = new ZipArchive(stream, ZipArchiveMode.Read);
-                foreach (string name in new[] { "Leitor.exe", "Leitor.dll", "coreclr.dll", "PresentationFramework.dll", "runtime/piper_worker.py", "runtime/check_piper.py", "runtime/piper-requirements.txt", "runtime/Install-Piper.ps1", "LICENSE.txt", "README.md" })
+                foreach (string name in new[] { "Leitor.exe", "Leitor.dll", "coreclr.dll", "PresentationFramework.dll", "runtime/piper_worker.py", "runtime/check_piper.py", "runtime/piper-requirements.txt", "runtime/download-manifest.json", "runtime/Install-Piper.ps1", "LICENSE.txt", "README.md" })
                     if (!zip.Entries.Any(x => x.FullName.Replace('\\', '/') == name)) return 2;
                 foreach (var entry in zip.Entries.Where(x => x.Length > 0)) { using var data = entry.Open(); data.CopyTo(Stream.Null); }
+                foreach (var entry in zip.Entries) SafeArchive.Resolve(Path.Combine(Path.GetTempPath(), "Leitor-verify"), entry.FullName);
                 return 0;
             }
             catch { return 1; }
@@ -37,10 +39,10 @@ public sealed class SetupWindow : Window
     public SetupWindow()
     {
         Title = "Instalar Leitor"; Width = 580; SizeToContent = SizeToContent.Height; ResizeMode = ResizeMode.NoResize; WindowStartupLocation = WindowStartupLocation.CenterScreen;
-        FontFamily = new FontFamily("Segoe UI"); FontSize = 15; Background = new SolidColorBrush(Color.FromRgb(242, 245, 249)); Foreground = new SolidColorBrush(Color.FromRgb(21, 38, 60));
+        FontFamily = new FontFamily("Segoe UI"); FontSize = 15; Background = new SolidColorBrush(Color.FromRgb(245, 239, 228)); Foreground = new SolidColorBrush(Color.FromRgb(48, 40, 32));
         var panel = new StackPanel { Margin = new(32) }; Content = panel;
-        panel.Children.Add(new TextBlock { Text = "leitor", FontSize = 34, FontWeight = FontWeights.Bold });
-        panel.Children.Add(new TextBlock { Text = "Textos que ganham voz", FontSize = 20, Margin = new(0, 6, 0, 20) });
+        panel.Children.Add(new TextBlock { Text = "Leitor 1.2.1", FontSize = 34, FontWeight = FontWeights.Bold });
+        panel.Children.Add(new TextBlock { Text = "Seu tempo, seu ritmo, sua leitura", FontSize = 20, Margin = new(0, 6, 0, 20) });
         panel.Children.Add(new TextBlock { Text = "Leitura local para Windows 10/11 de 64 bits. Inclui o .NET necessário. Vozes neurais são instaladas opcionalmente dentro do aplicativo.\n\nInstalação para este usuário, sem privilégios de administrador.", TextWrapping = TextWrapping.Wrap });
         panel.Children.Add(new TextBlock { Text = destination, FontSize = 12, Margin = new(0, 16, 0, 4), TextWrapping = TextWrapping.Wrap });
         panel.Children.Add(desktop); panel.Children.Add(install); panel.Children.Add(status);
@@ -60,14 +62,14 @@ public sealed class SetupWindow : Window
                 Directory.CreateDirectory(destination);
                 using var payload = Assembly.GetExecutingAssembly().GetManifestResourceStream("Payload.zip") ?? throw new IOException("Pacote do aplicativo ausente.");
                 using var zip = new ZipArchive(payload, ZipArchiveMode.Read);
-                zip.ExtractToDirectory(destination, overwriteFiles: true);
+                SafeArchive.Extract(zip, destination);
             });
             string startMenu = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Programs), "Leitor"); Directory.CreateDirectory(startMenu);
             CreateShortcut(Path.Combine(startMenu, "Leitor.lnk"), exe);
             if (shortcut) CreateShortcut(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), "Leitor.lnk"), exe);
             File.WriteAllText(Path.Combine(destination, "Desinstalar.ps1"), UninstallScript, System.Text.Encoding.UTF8);
             using var key = Registry.CurrentUser.CreateSubKey(@"Software\Microsoft\Windows\CurrentVersion\Uninstall\Leitor");
-            key.SetValue("DisplayName", "Leitor"); key.SetValue("DisplayVersion", "1.1.0"); key.SetValue("Publisher", "Projeto Leitor"); key.SetValue("InstallLocation", destination); key.SetValue("DisplayIcon", exe);
+            key.SetValue("DisplayName", "Leitor"); key.SetValue("DisplayVersion", "1.2.1"); key.SetValue("Publisher", "Projeto Leitor"); key.SetValue("InstallLocation", destination); key.SetValue("DisplayIcon", exe);
             key.SetValue("UninstallString", $"powershell.exe -NoProfile -ExecutionPolicy Bypass -File \"{Path.Combine(destination, "Desinstalar.ps1")}\"");
             key.SetValue("NoModify", 1); key.SetValue("NoRepair", 1);
             status.Text = "Instalação concluída. Abra o Leitor pelo menu Iniciar ou pelo atalho. Seus textos ficam em %LOCALAPPDATA%\\Leitor.";

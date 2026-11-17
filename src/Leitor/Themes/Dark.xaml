@@ -7,7 +7,7 @@
  <SolidColorBrush x:Key="AccentBrush" Color="#396DD6"/>
  <SolidColorBrush x:Key="HighlightBrush" Color="#2C466D"/>
  <SolidColorBrush x:Key="BufferedBrush" Color="#A8BFE8"/>
- <SolidColorBrush x:Key="InputTextBrush" Color="#15263C"/>
- <SolidColorBrush x:Key="InputBackgroundBrush" Color="#FFFFFF"/>
+ <SolidColorBrush x:Key="InputTextBrush" Color="#EDF3FC"/>
+ <SolidColorBrush x:Key="InputBackgroundBrush" Color="#243247"/>
  <SolidColorBrush x:Key="OnAccentBrush" Color="#FFFFFF"/>
-</ResourceDictionary>
+<SolidColorBrush x:Key="HoverBrush" Color="#243247"/><SolidColorBrush x:Key="SelectionBrush" Color="#263D5D"/></ResourceDictionary>

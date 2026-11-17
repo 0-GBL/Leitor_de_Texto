@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Windows.Input;
+using System.Text.Json.Serialization;
 
 namespace Leitor.Core;
 
@@ -50,18 +51,27 @@ public sealed class Document
     public Dictionary<int, double>? SegmentDurations { get; set; }
     public int? SegmentationVersion { get; set; }
     public bool Protected { get; set; }
+    public bool Completed { get; set; }
+    public double? ProgressPercent { get; set; }
+    [JsonIgnore] public bool IsUnavailable { get; set; }
+    [JsonIgnore] public bool IsLocked { get; set; }
+    [JsonIgnore] public double ProgressValue => Completed ? 100 : Math.Clamp(ProgressPercent ?? (Content.Length > 0 && CharacterPosition is int p ? 100.0 * p / Content.Length : 0), 0, 100);
+    [JsonIgnore] public string ProgressLabel => IsLocked ? "Leitura protegida" : Completed ? "Concluído" : $"{ProgressValue:0}% lido";
+    [JsonIgnore] public string ProtectionStatus => IsUnavailable ? "Indisponível · integridade" : Protected ? "Protegido por PIN" : "Texto local";
+    [JsonIgnore] public string DateLabel => IsLocked ? "Desbloqueie para ver os detalhes" : $"{Saved:dd MMM yyyy · HH:mm}";
     public string Description => Protected ? "Protegido por PIN" : $"{Saved:dd/MM/yyyy HH:mm}  ·  {Tags}";
 }
 public sealed record SpeechOptions(Voice? Voice, double Speed, double Pitch, double SentencePause, double ParagraphPause, double HeadingPause);
 public sealed class Settings : Observable
 {
-    private bool dark, background = true, autoScroll = true, appLock;
+    private bool dark, background = true, autoScroll = true, highlight = true, appLock;
     private double fontSize = 20, volume = 80, speed = 1, pitch, sentencePause = .25, paragraphPause = .65, headingPause = 1;
     private string mode = "Natural", transition = "Ao final da frase";
     private string? voiceId;
     public bool Dark { get => dark; set => Set(ref dark, value); }
     public bool Background { get => background; set => Set(ref background, value); }
     public bool AutoScroll { get => autoScroll; set => Set(ref autoScroll, value); }
+    public bool Highlight { get => highlight; set => Set(ref highlight, value); }
     public double FontSize { get => fontSize; set => Set(ref fontSize, value); }
     public double Volume { get => volume; set => Set(ref volume, value); }
     public double Speed { get => speed; set => Set(ref speed, value); }
@@ -73,4 +83,12 @@ public sealed class Settings : Observable
     public string Transition { get => transition; set => Set(ref transition, value); }
     public string? VoiceId { get => voiceId; set => Set(ref voiceId, value); }
     public bool AppLock { get => appLock; set => Set(ref appLock, value); }
+    public void Normalize()
+    {
+        static double Range(double n, double min, double max, double fallback) => double.IsFinite(n) ? Math.Clamp(n, min, max) : fallback;
+        FontSize = Range(FontSize, 14, 32, 20); Speed = Range(Speed, .5, 2.5, 1); Volume = Range(Volume, 0, 100, 80); Pitch = Range(Pitch, -25, 25, 0);
+        SentencePause = Range(SentencePause, 0, 5, .25); ParagraphPause = Range(ParagraphPause, 0, 10, .65); HeadingPause = Range(HeadingPause, 0, 15, 1);
+        if (Mode is not ("Natural" or "Rápida" or "Estudos" or "Personalizada")) Mode = "Natural";
+        if (Transition is not ("Imediata" or "Ao final da frase" or "Ao final do parágrafo")) Transition = "Ao final da frase";
+    }
 }

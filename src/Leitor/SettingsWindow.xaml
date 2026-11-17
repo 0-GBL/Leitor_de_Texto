@@ -1,26 +1,37 @@
-<Window x:Class="Leitor.SettingsWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
- Title="Configurações do Leitor" Width="560" Height="660" MinWidth="460" MinHeight="480" WindowStartupLocation="CenterOwner" FontFamily="Segoe UI" FontSize="14" Background="{DynamicResource BackgroundBrush}" Foreground="{DynamicResource TextBrush}">
- <DockPanel Margin="24">
-  <TextBlock DockPanel.Dock="Top" Text="Configurações" FontSize="25" FontWeight="SemiBold" Margin="0,0,0,18"/>
-  <Button DockPanel.Dock="Bottom" Content="Concluído" Click="Done" HorizontalAlignment="Right" Margin="0,12,0,0"/>
+<Window x:Class="Leitor.SettingsWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:p="clr-namespace:Leitor.Presentation"
+ Title="Configurações do Leitor" Width="650" Height="790" MinWidth="480" MinHeight="500" WindowStartupLocation="CenterOwner" FontFamily="Segoe UI" FontSize="14" Background="{DynamicResource BackgroundBrush}" Foreground="{DynamicResource TextBrush}" PreviewKeyDown="SettingsKeyDown">
+ <DockPanel Margin="26">
+  <StackPanel DockPanel.Dock="Top" Margin="0,0,0,20"><TextBlock Text="Do seu jeito" FontSize="27" FontWeight="SemiBold"/><TextBlock Text="Ajustes simples para uma leitura confortável e privada." Style="{StaticResource Caption}" Margin="0,6,0,0"/></StackPanel>
+  <Button DockPanel.Dock="Bottom" Content="Concluído" Click="Done" HorizontalAlignment="Right" Margin="0,16,0,0"/>
   <ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel>
-   <Border Background="{DynamicResource SurfaceBrush}" Padding="18" CornerRadius="10" Margin="0,0,0,12"><StackPanel>
-    <TextBlock Text="Aparência" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,12"/>
-    <Button Content="{Binding ThemeActionLabel}" Command="{Binding ToggleThemeCommand}" HorizontalAlignment="Left" AutomationProperties.Name="Alternar tema"/>
-    <TextBlock Text="{Binding Settings.FontSize, StringFormat=Tamanho do texto · {0:0}}" Margin="0,10,0,0"/>
-    <Slider Minimum="14" Maximum="32" TickFrequency="1" Value="{Binding Settings.FontSize}" ValueChanged="PreferenceChanged" AutomationProperties.Name="Tamanho da fonte"/>
+   <Border Style="{StaticResource Card}" Padding="20" Margin="0,0,0,14"><StackPanel>
+    <TextBlock Text="Aparência" Style="{StaticResource SectionTitle}"/>
+    <Button Command="{Binding ToggleThemeCommand}" HorizontalAlignment="Left" AutomationProperties.Name="Alternar tema" ToolTip="Alternar tema · Ctrl+T"><StackPanel Orientation="Horizontal"><p:AppIcon Kind="{Binding ThemeIconName}" Margin="0,0,8,0"/><TextBlock Text="{Binding ThemeActionLabel}"/></StackPanel></Button>
+    <TextBlock Text="{Binding Settings.FontSize, StringFormat=Tamanho do texto · {0:0}}" Margin="0,18,0,0"/>
+    <Slider Minimum="14" Maximum="32" TickFrequency="1" Value="{Binding Settings.FontSize}" ValueChanged="PreferenceChanged" AutomationProperties.Name="Tamanho da fonte" ToolTip="Ajustar o tamanho do editor e da leitura"/>
    </StackPanel></Border>
-   <Border Background="{DynamicResource SurfaceBrush}" Padding="18" CornerRadius="10" Margin="0,0,0,12"><StackPanel>
-    <TextBlock Text="Reprodução" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,8"/>
-    <CheckBox Content="Reproduzir em segundo plano" IsChecked="{Binding Settings.Background}" Click="PreferenceChanged" ToolTip="Continua ao minimizar ou trocar de janela. Fechar salva o progresso e encerra o aplicativo."/>
-    <CheckBox Content="Rolagem automática" IsChecked="{Binding Settings.AutoScroll}" Click="PreferenceChanged"/>
+   <Border Style="{StaticResource Card}" Padding="20" Margin="0,0,0,14"><StackPanel>
+    <TextBlock Text="Reprodução" Style="{StaticResource SectionTitle}"/>
+    <CheckBox Content="Reproduzir em segundo plano" IsChecked="{Binding Settings.Background}" Click="PreferenceChanged" ToolTip="Continua ao minimizar ou trocar de janela. Fechar salva o progresso e encerra."/>
+    <CheckBox Content="Destacar a frase narrada" IsChecked="{Binding Settings.Highlight}" Click="PreferenceChanged" ToolTip="Ativar a cor de destaque do trecho atual"/>
+    <CheckBox Content="Rolagem automática" IsChecked="{Binding Settings.AutoScroll}" Click="PreferenceChanged" ToolTip="Manter a frase narrada visível"/>
    </StackPanel></Border>
-   <Border Background="{DynamicResource SurfaceBrush}" Padding="18" CornerRadius="10"><StackPanel>
-    <TextBlock Text="Privacidade e segurança" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,12"/>
-    <Button Content="Ativar / desativar PIN" Command="{Binding PinCommand}" HorizontalAlignment="Left"/>
+   <Border Style="{StaticResource Card}" Padding="20"><StackPanel>
+    <TextBlock Text="Privacidade e segurança" Style="{StaticResource SectionTitle}"/>
+    <TextBlock Text="{Binding PinStateLabel}" FontWeight="SemiBold" Margin="0,0,0,12"/>
+    <WrapPanel><Button Content="Ativar / desativar PIN" Command="{Binding PinCommand}" ToolTip="Cadastrar PIN ou remover proteção após autenticar" Margin="0,0,8,8"/><Button Content="Alterar PIN" Command="{Binding ChangePinCommand}" IsEnabled="{Binding PinConfigured}" ToolTip="Confirmar o PIN atual e definir outro sem descriptografar os documentos" Margin="0,0,0,8"/></WrapPanel>
     <CheckBox Content="Solicitar PIN ao abrir o aplicativo" IsChecked="{Binding Settings.AppLock}" Click="AppLockChanged"/>
-    <Button Content="Proteger / desproteger este texto" Command="{Binding ProtectionCommand}" HorizontalAlignment="Left"/>
-    <TextBlock Text="{Binding ProtectionLabel}" Style="{StaticResource Caption}" TextWrapping="Wrap"/>
+    <Button Content="Bloquear textos protegidos nesta sessão" Command="{Binding LockSessionCommand}" IsEnabled="{Binding SessionUnlocked}" ToolTip="Salvar, interromper a leitura e retirar os textos protegidos da sessão desbloqueada" Margin="0,8,0,14" HorizontalAlignment="Left"/>
+    <Button Content="Proteger / desproteger este texto" Command="{Binding ProtectionCommand}" ToolTip="Criptografar ou remover a criptografia do documento atual após verificar o PIN" HorizontalAlignment="Left"/>
+    <TextBlock Text="{Binding ProtectionLabel}" Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,10,0,20"/>
+    <Expander Header="Entenda a proteção dos seus dados" IsExpanded="True"><StackPanel Margin="0,14,0,0">
+     <TextBlock Text="Armazenamento local" FontWeight="SemiBold"/><TextBlock Text="Biblioteca, etiquetas, progresso e preferências ficam em %LOCALAPPDATA%\Leitor. As vozes e o runtime Piper também ficam nessa pasta." TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" Margin="0,6,0,16"/>
+     <TextBlock Text="Bloqueio de entrada e criptografia" FontWeight="SemiBold"/><TextBlock Text="Solicitar PIN ao abrir bloqueia a interface. Somente os documentos marcados como Protegido por PIN têm título, conteúdo, etiquetas e progresso criptografados com AES-256-GCM. Textos sem essa marca continuam legíveis no arquivo local." TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" Margin="0,6,0,16"/>
+     <TextBlock Text="PIN e sessão" FontWeight="SemiBold"/><TextBlock Text="O PIN não é guardado em texto simples. A chave usa PBKDF2 e DPAPI da sua conta do Windows. Tentativas incorretas geram espera progressiva, preservada após reiniciar, sem apagar documentos. Bloqueie a sessão para retirar a chave e os textos protegidos da memória acessível pelo aplicativo." TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" Margin="0,6,0,16"/>
+     <TextBlock Text="Quando usamos internet" FontWeight="SemiBold"/><TextBlock Text="A internet é utilizada para instalar recursos e baixar vozes de fontes HTTPS verificadas. Seus textos não são enviados. A narração funciona localmente após instalar os recursos." TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" Margin="0,6,0,16"/>
+     <TextBlock Text="Se esquecer o PIN" FontWeight="SemiBold"/><TextBlock Text="Não há recuperação do PIN nem chave mestra externa. Preserve os originais importantes. Os dados protegidos também dependem da conta atual do Windows; copiar os arquivos para outra conta não basta para abri-los." TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" Margin="0,6,0,16"/>
+     <TextBlock Text="Limites da proteção" FontWeight="SemiBold"/><TextBlock Text="A proteção não impede malware, captura da tela, inspeção da memória de uma sessão desbloqueada ou ataques de quem controla o sistema operacional. Textos e PINs passam por memória gerenciada; não é possível garantir o apagamento de todas as cópias. Backups e versões antigas dos arquivos podem conter dados anteriores." TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}" Margin="0,6,0,0"/>
+    </StackPanel></Expander>
    </StackPanel></Border>
   </StackPanel></ScrollViewer>
  </DockPanel>

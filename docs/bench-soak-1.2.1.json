@@ -1,0 +1,22 @@
+{
+  "version": "1.2.1",
+  "engine": "WAV sint\u00E9tico local de 2 s; gera\u00E7\u00E3o n\u00E3o cooperativa de 40 ms; volume zero",
+  "soak": true,
+  "rows": [
+    {
+      "words": 50000,
+      "sentences": 5000,
+      "splitMedianMs": 12.1345,
+      "splitAllocatedMb": 3.8375523885091147,
+      "loadMs": 12.2644,
+      "firstAudioMs": 170.9423,
+      "navigationRequests": 6400,
+      "navigationMs": 30031.8956,
+      "synthesisCallsForNavigation": 320,
+      "stopMs": 5.5855,
+      "cpuMsDuringNavigation": 875,
+      "workingSetAfterMb": 53.640625,
+      "workingSetChangeMb": -0.34375
+    }
+  ]
+}

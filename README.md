@@ -1,110 +1,143 @@
-# Leitor 1.1
+# Leitor 1.2.1
 
-Aplicativo de leitura de textos em áudio para Windows 10/11 x64. C#, .NET 10 LTS, WPF e MVVM. Todos os textos e áudios são processados localmente. Gratuito, com código disponibilizado sob GPL-3.0-or-later; veja `LICENSE`.
+Aplicativo desktop gratuito de leitura de textos em áudio para Windows 10/11 x64. Seu objetivo é oferecer uma leitura confortável para estudo e uso diário, com simplicidade, bom desempenho e naturalidade da voz. **Seu tempo, seu ritmo, sua leitura.**
 
-## Usar
+Construído em C#, .NET 10 LTS, WPF e MVVM, com SQLite, NAudio, System.Speech e Piper opcional. Processamento de textos e síntese locais, sem conta, serviços pagos, telemetria ou envio dos textos para servidores. Código sob GPL-3.0-or-later; veja LICENSE e THIRD-PARTY-NOTICES.md.
 
-1. Abra `artifacts/Leitor-Instalador.exe` para instalar para seu usuário, ou extraia `artifacts/Leitor-portatil.zip` e abra `Leitor.exe`.
-2. Digite ou cole o texto, informe título e etiquetas separadas por vírgula e clique em **Iniciar leitura**.
-3. Acompanhe o destaque na aba **Acompanhar leitura**. Use iniciar/pausar/continuar, ±10 segundos e os grupos **¶ Parágrafos** e **▤ Títulos**. Selecione uma frase e pressione Enter para ir até ela; selecionar um trecho sozinho não muda o destaque da narração.
-4. Os textos e o progresso são salvos automaticamente. Selecione um item da biblioteca e clique em **Abrir texto selecionado**. Pesquise título/conteúdo ou filtre por uma etiqueta exata.
+## Instalação e uso
 
-O pacote inclui o runtime .NET: o usuário final não precisa instalar SDK ou configurar SQLite. `Iniciar.cmd` abre a versão publicada diretamente desta pasta. A versão portátil também guarda a biblioteca no perfil do Windows, não junto ao executável.
+1. Execute `artifacts/Leitor-Instalador.exe` (instalação por usuário) ou extraia `artifacts/Leitor-portatil.zip` e abra `Leitor.exe`.
+2. Use **Novo texto**, digite ou cole conteúdo e informe título e etiquetas separadas por vírgula. O salvamento é automático; Ctrl+S salva imediatamente.
+3. Inicie a leitura e acompanhe a frase narrada na aba **Acompanhar**. A seleção manual não desloca o destaque; Enter vai até a frase selecionada.
+4. Use pausar/continuar, **Reiniciar leitura**, ±10 segundos e os grupos separados de parágrafos e títulos.
+5. Na biblioteca, pesquise título/conteúdo, filtre uma etiqueta exata e abra o texto selecionado. Os itens mostram data, progresso, proteção e conclusão. Textos protegidos bloqueados não expõem seus títulos ou etiquetas.
 
-**Reiniciar leitura** cancela a geração atual, zera o progresso e começa novamente o texto original, inclusive depois de uma prévia de voz. Para interromper mantendo a posição, use **Pausar**; Esc continua disponível para cancelar e conservar o progresso.
+O pacote é autossuficiente: não exige SDK nem instalação manual de .NET/SQLite. `Iniciar.cmd` abre a versão publicada na pasta do projeto. Portátil e instalada usam a mesma biblioteca em `%LOCALAPPDATA%\Leitor`, e não junto ao executável. Feche o aplicativo antes de atualizar. Desinstalar preserva biblioteca, cofre e vozes. Nenhum instalador tem assinatura Authenticode; o Windows pode apresentar avisos de editor desconhecido.
 
-## Configurações e temas
+## Correções da versão 1.2.1
 
-Use a engrenagem no canto superior direito. **Aparência** reúne tamanho do texto e o botão dinâmico de tema (lua: Tema escuro; sol: Tema claro). **Reprodução** reúne segundo plano e rolagem automática. **Privacidade e segurança** reúne PIN, solicitação ao abrir e proteção individual do texto. A lateral principal contém somente voz, prévia, vozes offline, modo, velocidade, volume, tom, pausas e transição.
+A barra aceita clique direto e arraste, sem executar os saltos percentuais padrão do Slider. Durante a seleção, a prévia fica congelada em relação ao temporizador; soltar confirma um único destino. Esc cancela o gesto. A solicitação mais recente substitui anteriores, evitando filas de síntese; uma janela de 40 ms agrupa ações rápidas. A navegação preserva reprodução, pausa ou parada. Um trecho ainda não gerado recebe prioridade e o indicador discreto de preparação; durante a pausa só o destino é preparado.
 
-O tema claro usa fundo de papel `#F5EFE4`, painéis `#FFFBF5`, texto `#302820`, bordas `#DED0BD`, botões principais `#79583D` e destaque `#F5DDA0`. O tema escuro anterior foi preservado. Todas as cores da interface principal estão em `src/Leitor/Themes/Light.xaml` e `Dark.xaml`; `ThemeService` alterna os dicionários sem reiniciar o aplicativo.
+A prévia informa **posição estimada** (≈) ou **áudio já medido**. O tempo do gesto usa a duração congelada no início, evitando mudar o destino enquanto o total é recalculado. Em trechos estimados, a fração interna da frase é convertida para sua duração real, mantendo o tempo lógico selecionado. O percentual/total ainda pode variar conforme outras durações se tornam conhecidas; navegação por palavra e precisão acústica de amostra não são prometidas.
 
-## Vozes neurais
+Com foco na barra: ←/→ selecionam ±5 s; Page Up/Page Down avançam/retrocedem 30 s; Home/End selecionam início/final. Soltar a tecla confirma. Atalhos globais anteriores e edição nativa permanecem iguais; F1 inclui os comandos da barra.
 
-Em **Vozes offline**, clique em **Instalar / reparar Piper local**. Isso instala Python e Piper em uma pasta própria do aplicativo, sem modificar o Python do sistema. Depois selecione uma voz, leia sua ficha de licença, aceite-a e baixe o modelo. Feche a janela e selecione a voz na tela principal. Modelos instalados têm preferência no primeiro uso; a escolha posterior é lembrada.
+A captura final do cursor ocorre antes de parar/resetar o dispositivo. Trocas de documento interrompem e salvam a posição final; cada texto conserva seu progresso. Falha de gravação impede fechar/descartar o editor e mantém o salvamento automático disponível para nova tentativa. Suspensão solicita pausa e salvamento, sem retomada automática; falhas reais de hardware/energia continuam limitadas ao que o Windows permite capturar.
 
-A versão 1.1 corrige a passagem de aspas do Windows PowerShell 5.1: a checagem agora executa `check_piper.py`, sem Python inline por `-c`. O marcador de instalação pronta só é gravado depois de `pip check` e da verificação dos imports/provedor CPU. As dependências estão fixadas em `runtime/piper-requirements.txt`. Para reparar uma instalação que apresentou o erro de parêntese, utilize novamente **Instalar / reparar Piper local**; não apague a biblioteca nem as vozes baixadas.
+Modelos Piper inválidos usam a alternativa Windows durante a sessão, sem tentar novamente o mesmo modelo a cada frase. Abrir/reparar os recursos de voz permite nova tentativa. Listas numeradas não viram frases isoladas nem títulos por causa do marcador, abreviações adicionais são preservadas e cortes internos de títulos longos não acrescentam pausas artificiais. Os quatro modos e preferências não são redefinidos. O destaque pode ser ligado/desligado em Reprodução, independentemente da rolagem.
 
-Downloads com falha transitória recebem até três tentativas. Se o servidor ficar 30 segundos sem enviar dados, a tentativa é interrompida e repetida; uma falha final mostra uma mensagem e preserva o modelo já instalado. A instalação inicial depende da disponibilidade do PyPI, Python.org e do repositório de modelos. Depois de instalado, o motor não usa a rede para narrar.
+Resultados, causa raiz, cenários de 1.000 a 50.000 palavras e limites: `docs/VALIDACAO.md`, `docs/DESEMPENHO-1.2.1.md` e `docs/REPRODUCAO-1.2.1.md`.
+## Interface e configurações
 
-O catálogo inicial oferece Faber e Edresson em português brasileiro e LJ Speech em inglês americano. As vozes Windows instaladas são enumeradas automaticamente, incluindo masculinas e femininas quando disponíveis. A disponibilidade de português no motor Windows depende das vozes SAPI instaladas no sistema. O tom é habilitado somente no motor Windows; seu efeito depende do suporte da voz.
+Cabeçalho com marca, privacidade local, novo/colar, tema rápido, ajuda e configurações. Biblioteca à esquerda, editor/leitura ao centro e narração à direita. O player mostra estado, tempo decorrido, duração, percentual e faixa já processada. Estados vazios, busca sem resultados e geração de áudio têm orientação própria.
 
-A instalação do Piper e os downloads de modelos exigem internet. Depois disso a leitura funciona offline. O gerenciador só consulta fontes de software e fichas de modelos; ele nunca recebe o texto do editor ou da biblioteca. A voz do Windows permite usar o aplicativo sem instalar Piper. Em caso de falha do Piper, uma mensagem informa o uso do motor Windows como alternativa.
+A engrenagem organiza **Aparência** (tema/fonte), **Reprodução** (segundo plano/rolagem automática) e **Privacidade e segurança** (PIN, bloqueio inicial, alteração do PIN, bloquear sessão e proteção individual). A lateral principal contém voz, prévia, vozes offline, modo, velocidade, volume e ajustes recolhíveis de pausas/tom/transição.
 
-## Modos e reprodução
+O botão do cabeçalho oferece **Tema escuro** com lua no claro e **Tema claro** com sol no escuro. A troca salva a preferência sem interromper a reprodução. O claro mantém a identidade de livro: fundo #F5EFE4, painéis #FFFBF5, texto #302820, bordas #DED0BD, ação #79583D e destaque #F5DDA0. O escuro mantém a identidade anterior. Cores centralizadas em `Themes/Light.xaml` e `Dark.xaml`; geometrias em `Icons.xaml` e estilos em `Controls.xaml`. Não há biblioteca externa de interface.
 
-- **Natural:** 1×; pausas de 0,25 s entre frases, 0,65 s entre parágrafos e 1 s entre tópicos.
-- **Rápida:** 1,5×; pausas de 0,1 / 0,25 / 0,4 s.
-- **Estudos:** 0,9×; pausas de 1 / 3 / 5 s.
-- **Personalizada:** velocidade, tom e pausas determinados pelo usuário.
+Tab/Shift+Tab percorrem os controles; há nomes acessíveis, dicas com atalhos, foco visível e texto ajustável. Janelas se adaptam à área de trabalho, com painéis compactos em larguras menores e manifesto PerMonitorV2. Validação completa com Narrador/NVDA, várias escalas de DPI e teclado ABNT2 físico continua pendente.
 
-As pausas de parágrafo/tópico substituem a pausa de frase no mesmo limite, evitando somá-las. Mudanças de modo e velocidade entram na próxima frase. O volume muda durante a reprodução. A troca de voz pode ser imediata, ao final da frase ou ao final do parágrafo. A troca imediata regenera a frase atual e tenta conservar o deslocamento em segundos.
+## Vozes offline e Piper
 
-Vírgulas, dois-pontos e ponto e vírgula permanecem na mesma frase e são interpretados pelo motor de voz. Abreviações comuns e números decimais são preservados; reticências e pontuação seguida de aspas/parênteses fecham a frase corretamente. Cortes de segurança no meio de frases extensas não recebem a pausa configurada de fim de frase. O destaque usa um estado de narração separado da seleção e só avança quando o áudio daquela frase começa no dispositivo, não durante a geração antecipada. A verificação visual é atualizada a cada 50 ms durante a reprodução.
+Em **Vozes offline**, use **Instalar / reparar Piper local**. O aplicativo instala Python 3.14.10 e Piper 1.8.0 numa pasta própria, sem alterar o Python do sistema. Selecione um modelo, consulte e aceite sua ficha de licença e baixe-o. O catálogo inclui Faber e Edresson em português brasileiro e LJ Speech em inglês. Vozes SAPI do Windows também são enumeradas; idioma, gênero e suporte a tom dependem do sistema instalado.
 
-A duração e os saltos em trechos ainda não sintetizados são **estimados**. O cálculo passa a usar a duração real conforme cada frase é produzida. A faixa discreta abaixo do cursor representa trechos já processados na sessão; o áudio em memória é descartado após o uso. Não é uma promessa de cache permanente. O texto inteiro não precisa virar áudio para a leitura começar. Uma única frase seguinte é antecipada.
+A correção de aspas do PowerShell 5.1 permanece: a validação executa `check_piper.py`, sem código Python inline. O ambiente novo usa Python e wheel pip com SHA-256 fixado em `runtime/download-manifest.json`, dependências com versões/hashes e `pip --require-hashes --only-binary=:all:`. Extração rejeita caminhos externos e links. Instalação em estágio só substitui o runtime anterior depois de `pip check` e checagem do Piper. Modelos e configurações também têm hashes confiáveis fixados no catálogo; falhas não substituem uma voz anterior por download não verificado. Confira a auditoria em `docs/SEGURANCA-1.2.md`.
 
-O salvamento agora usa o cursor de bytes do dispositivo de áudio, sem a subtração fixa de latência da versão 1.0. No fechamento, o dispositivo é pausado antes da captura final. São preservados deslocamento fracionário, tempo decorrido, posição no texto original e durações conhecidas das frases. A retomada restaura esses metadados antes de iniciar o áudio. O mostrador apresenta segundos inteiros; internamente os valores não são arredondados. O driver e a nova síntese neural podem introduzir pequenas variações; não se promete retomada da mesma amostra de áudio, pois não existe cache permanente.
+Downloads têm até três tentativas e limite de 30 segundos sem dados. A primeira preparação exige internet (Python.org, PyPI e Hugging Face); depois disso a síntese usa modelos locais e pipes, sem enviar textos. A ficha da licença acompanha o modelo. Runtime já instalado não é atualizado silenciosamente: use **Instalar / reparar** para receber o Python atualizado. Uma falha do motor neural informa a alternativa Windows.
 
-As bibliotecas 1.0 são lidas sem recriar o SQLite nem limpar configurações. Para preservar os índices de documentos antigos que têm leitura em andamento, a divisão anterior continua sendo usada naquele documento até editar o conteúdo ou usar **Reiniciar leitura**. Documentos novos e leituras reiniciadas usam o tratamento atualizado de pontuação. Tempos históricos que a versão 1.0 não armazenava não podem ser reconstruídos exatamente; a precisão adicional passa a valer nos próximos salvamentos.
+## Reprodução e progresso
 
-Reprodução em segundo plano vem ativada. Ao desativá-la, trocar de janela ou minimizar pausa a leitura; a retomada é manual. Fechar encerra o aplicativo e preserva o progresso. Não há ícone de bandeja nem execução depois de fechar.
+| Modo | Velocidade | Pausas: frase / parágrafo / tópico |
+| --- | --- | --- |
+| Natural | 1× | 0,25 / 0,65 / 1 s |
+| Rápida | 1,5× | 0,1 / 0,25 / 0,4 s |
+| Estudos | 0,9× | 1 / 3 / 5 s |
+| Personalizada | Configurável | Configuráveis |
 
-## Privacidade e PIN
+Pausas de parágrafo/tópico substituem a pausa de frase no mesmo limite. Vírgulas, dois-pontos e ponto e vírgula são interpretados pelo motor; abreviações e decimais comuns são preservados. Cortes internos de frases extensas não recebem pausa artificial de fim de frase. Modo/velocidade passam a valer na próxima frase; volume muda durante o áudio. A voz pode mudar imediatamente, ao final da frase ou do parágrafo; a troca imediata tenta conservar o deslocamento.
 
-Proteção desligada por padrão. Em **⚙ → Privacidade e segurança → Ativar / desativar PIN**, crie um PIN com pelo menos seis dígitos, confirmando-o. Isso ativa o bloqueio ao abrir. Use **Proteger / desproteger este texto** na mesma categoria para criptografar individualmente um documento. Ativar o PIN, por si só, não criptografa todos os textos.
+A reprodução é progressiva, antecipando uma frase. Destaque e rolagem seguem o início efetivo do áudio, com atualização visual a cada 50 ms. Duração total e saltos em partes ainda não sintetizadas são **estimativas**, substituídas por durações reais conforme a geração. A faixa processada representa a sessão; áudio é descartado após uso e não há cache permanente em disco.
 
-Nos documentos protegidos, título, conteúdo, etiquetas, data e progresso são criptografados com AES-256-GCM. A chave aleatória é envolvida por uma chave derivada do PIN com PBKDF2-SHA256 (600.000 iterações) e protegida adicionalmente com DPAPI para o usuário atual do Windows. A chave fica em memória enquanto a sessão está desbloqueada. A autenticação é exigida para abrir, excluir ou remover a proteção de um texto. Tentativas incorretas recebem espera progressiva durante a sessão.
+O progresso usa o cursor do dispositivo de áudio, preservando deslocamento fracionário, tempo decorrido, posição no original e durações conhecidas. Fechar pausa a saída antes da captura final. O mostrador usa segundos inteiros; o armazenamento não arredonda. A ressíntese e o driver podem produzir pequenas diferenças: não se promete retomada da mesma amostra ou latência acústica exata.
 
-Não há recuperação de PIN. A biblioteca criptografada depende também do perfil atual do Windows: copiar somente os arquivos para outro usuário/computador não permite abri-la. Guarde cópias dos seus originais importantes. Desativar o PIN pede autenticação e confirmação, descriptografa os documentos numa transação e remove o material de chave.
+**Reiniciar leitura** começa o texto original em zero, inclusive depois de uma prévia. Pausar conserva a posição; Esc interrompe e salva. Ao desativar reprodução em segundo plano, minimizar ou mudar de janela pausa a leitura; a retomada é manual. Fechar encerra o aplicativo; não existe bandeja ou reprodução após fechar.
 
-Dados em `%LOCALAPPDATA%\Leitor`: `library.db`, `settings.json`, `vault.json` (somente com PIN), `voices\` e `piper\`. O SQLite é criado automaticamente. `secure_delete` é ativado para reduzir resíduos após edição/proteção/exclusão; isso não garante apagar versões já existentes em backups, snapshots ou blocos físicos de SSD. O aplicativo não protege contra malware executando na mesma conta nem contra inspeção da memória de uma sessão desbloqueada. Áudio gerado não é gravado em cache de disco.
+Documentos 1.0 em andamento mantêm a divisão antiga até edição ou reinício, preservando índices. Metadados históricos ausentes não podem ser reconstruídos. A versão 1.2 mantém o SQLite e lê documentos protegidos antigos. Novos campos JSON são opcionais. Documentos protegidos salvos pela 1.2 usam autenticação adicional de identidade e **não devem ser reabertos numa versão anterior**; para voltar à versão antiga, restaure um backup anterior compatível.
 
-## Teclado e acessibilidade
+## Privacidade e segurança
+
+PIN permanece **desligado por padrão**. Criar ou alterar exige confirmação e de 6 a 64 dígitos. PINs existentes continuam verificáveis. O bloqueio ao abrir restringe a interface; **ele não criptografa automaticamente toda a biblioteca**. Use **Proteger este texto** para criptografar cada documento. Uma pessoa que acesse o SQLite verá documentos desprotegidos normalmente; os protegidos têm título, conteúdo, etiquetas, data e progresso cifrados.
+
+AES-256-GCM com nonce aleatório por gravação protege cada payload. Uma chave aleatória é envolvida por uma chave derivada do PIN com PBKDF2-SHA256 (600.000 iterações) e DPAPI do usuário Windows. O formato 1.2 autentica também a identidade do documento. Trocar o PIN envolve novamente a mesma chave, preservando os textos. **Bloquear sessão protegida** salva/interrompe a leitura e limpa a chave da sessão. Há descarte explícito de buffers criptográficos onde possível; strings gerenciadas e memória do sistema não têm garantia de apagamento imediato.
+
+Tentativas incorretas recebem espera progressiva de 2 a 30 segundos, persistida com DPAPI entre sessões. Nenhuma quantidade de erros apaga os textos ou a chave. Essa limitação desestimula tentativas pela aplicação; alguém com controle da conta/arquivos pode excluir ou restaurar o estado e contorná-la. Ela não substitui a criptografia.
+
+Não há recuperação do PIN. Documentos cifrados dependem também do perfil Windows: copiar arquivos para outra conta/máquina não basta. Guarde originais importantes e backups compatíveis. Desativar o PIN exige autenticação/confirmacão, descriptografa em transação e só depois remove a chave; se houver documento inválido, a operação é recusada para preservar os dados.
+
+Arquivos em `%LOCALAPPDATA%\Leitor`: `library.db`, `settings.json`, `vault.json` e `auth-state.bin` quando aplicáveis, `voices\` e `piper\`. Configurações não contêm PIN. Novas pastas de dados recebem ACL restrita ao usuário, SYSTEM e administradores; pastas já existentes conservam suas permissões. Configurações/cofre usam substituição atômica e SQLite usa transações/SQL parametrizado. Um documento corrompido aparece indisponível sem impedir os demais; configurações JSON inválidas são preservadas numa cópia `.invalid-*`.
+
+`secure_delete` reduz resíduos no SQLite, mas não remove backups, snapshots ou blocos físicos de SSD. A proteção não resiste a malware na mesma conta, administrador, inspeção de memória desbloqueada ou comprometimento do sistema. Não há promessa de segurança absoluta. Erros inesperados não exibem conteúdo de textos nem PIN; testes e pacotes excluem dados pessoais.
+
+## Atalhos
+
+F1 ou **Ajuda e atalhos** abre a central organizada em cinco categorias. Os atalhos atuam somente no Leitor.
 
 | Atalho | Ação |
 | --- | --- |
 | Ctrl+N | Novo texto |
+| Ctrl+V | Colar no campo atual; fora de campos editáveis, no editor |
 | Ctrl+S | Salvar |
-| Ctrl+Espaço | Reproduzir / pausar / continuar |
-| Esc | Parar e cancelar geração |
-| Ctrl+← / Ctrl+→ | Voltar / avançar 10 segundos |
-| Enter na lista de frases | Ir até a frase selecionada |
+| Ctrl+Espaço | Iniciar / pausar / continuar |
+| Espaço | Reproduzir fora de edição e de controles com uso nativo da tecla |
+| Esc | Interromper preservando o progresso; fechar ajuda/configurações |
+| Ctrl+R | Reiniciar leitura |
+| Ctrl+← / → | ±10 segundos, fora de campos editáveis |
+| Ctrl+↑ / ↓ | Parágrafo anterior / próximo, fora da edição |
+| Ctrl+Shift+↑ / ↓ | Título anterior / próximo, fora da edição |
+| Ctrl+T | Alternar tema |
+| Ctrl+F | Focar busca da biblioteca |
+| Ctrl+vírgula | Configurações (Key.OemComma, incluindo ABNT2) |
+| Enter na lista de frases | Ir à frase selecionada |
+| F1 | Central de atalhos |
+| Tab / Shift+Tab | Próximo / anterior controle |
+| Ctrl+Tab | Sair do editor que aceita tabulação |
 
-Tab e Shift+Tab navegam pelos controles. Os controles principais têm nomes de automação, foco visível, temas claro/escuro e fonte ajustável. O leitor de tela depende do suporte do Windows/WPF; a validação completa com NVDA e Narrador ainda é necessária.
+Movimentação de cursor, seleção, colagem e espaços mantêm o comportamento nativo nos campos. Não há atalho de exclusão nem captura global.
 
-## Desenvolvimento
-
-Execute em PowerShell a partir da pasta do projeto:
+## Desenvolvimento e validação
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\Build.ps1
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\Build.ps1 -Package
 ```
 
-O script instala o SDK .NET 10 em `.tools/dotnet` se necessário, restaura dependências em `.tools/packages`, compila e executa os testes. `-Package` produz a distribuição autossuficiente, ZIP portátil e instalador por usuário. Precisa de internet na primeira preparação e espaço para SDK, dependências e pacotes. SDK validado: 10.0.404. Pacotes NuGet têm versões fixas e arquivos de lock; use `dotnet restore --locked-mode` para conferir o grafo congelado.
+O script prepara SDK .NET 10 em `.tools/dotnet` quando necessário, restaura dependências em `.tools/packages`, compila, testa e empacota. SDK validado: 10.0.404. NuGet tem versões e locks; confira com `dotnet restore src/Leitor/Leitor.csproj -r win-x64 --locked-mode`. Primeira preparação requer internet e espaço para SDK/pacotes.
 
-Os testes de Piper são executados se houver runtime e voz no diretório de dados. Para ambiente isolado, defina `LEITOR_DATA_DIR` antes de iniciar o processo; essa variável redireciona a biblioteca, a proteção e os recursos de voz. O teste de reprodução usa volume zero, mas precisa de um dispositivo de áudio disponível.
+Use `LEITOR_DATA_DIR` para redirecionar biblioteca/cofre/runtime/modelos a uma pasta **isolada de testes**. Testes de reprodução usam volume zero e precisam de dispositivo de áudio. O conjunto padrão tem 34 testes; Piper exige runtime/voz local e informa quando indisponível. `LEITOR_TEST_DOWNLOADS=1` acrescenta o teste de downloads reais (35 no ambiente completo). Para repetir só um cenário, passe `--filter=<parte do nome>` ao runner; isso não substitui a regressão completa. O instalador Piper também pode ser executado isoladamente: `scripts/Install-Piper.ps1 -Destination <pasta-de-testes>\piper`.
 
-O teste WPF usa bibliotecas temporárias próprias e abre/fecha janelas para conferir bindings, modos, temas, destaque e reinício. Defina `LEITOR_TEST_DOWNLOADS=1` para incluir downloads reais de Faber/Edresson pelo mesmo serviço usado na interface. Esses downloads devem ser direcionados a um `LEITOR_DATA_DIR` de testes. O instalador de recursos pode ser verificado separadamente com `powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/Install-Piper.ps1 -Destination <pasta isolada>`.
+`tests/Leitor.Bench` compara processamento, consultas da timeline, troca de recursos de tema e janela vazia entre DLLs. Métodos, resultados, testes e pendências estão em `docs/VALIDACAO.md`; auditoria em `docs/SEGURANCA-1.2.md`. A entrega inclui relatório e SHA256SUMS em artifacts. Nenhum commit, push ou publicação externa faz parte desta entrega.
 
-## Organização
+## Arquitetura
 
-- `src/Leitor/Core`: modelos, comandos, processamento e estimativas.
-- `src/Leitor/Services`: SQLite, criptografia, configurações, síntese e reprodução.
-- `src/Leitor/ViewModels`: estado e comandos da interface.
-- `src/Leitor`: telas WPF, gerenciador de vozes e diálogo de PIN.
-- `runtime/piper_worker.py`: processo persistente, protocolo JSON por pipes locais e WAV em memória.
-- `tests/Leitor.Tests`: verificação automatizada sem serviço de testes externo.
-- `installer`: instalador WPF por usuário, atalhos e desinstalação registrada no Windows.
-- `docs/VALIDACAO.md`: resultados e limites da verificação.
+- `src/Leitor/Core`: documentos, comandos, segmentação e timeline com somas prefixadas.
+- `Services`: persistência SQLite, cofre, gravação atômica, temas, downloads, motores e reprodução.
+- `ViewModels`: estado e comandos MVVM; `Presentation`: ícones/conversores/atalhos contextuais.
+- `Themes`: cores, geometrias e estilos WPF; telas principal, ajuda, configurações e vozes.
+- `runtime`: worker Python persistente, protocolo JSON por pipes, verificação e manifestos de dependências.
+- `shared/SafeArchive.cs`: validação de extração também usada pelo instalador.
+- `tests`: regressão integrada e medições; `installer`: distribuição por usuário e desinstalação registrada.
 
-`ISpeechEngine` separa síntese de reprodução. A exportação futura pode consumir áudio desse contrato sem acoplar o editor ao formato. Exportação WAV/MP3 e demais funções futuras do prompt não estão implementadas.
+`ISpeechEngine` desacopla síntese de reprodução; textos são enviados como dados JSON, sem construir comandos de shell. A estrutura permanece modular para evoluções futuras.
 
-## Limitações atuais
+## Limitações e histórico
 
-Identificação de títulos, frases e parágrafos usa heurísticas: cada linha não vazia é tratada como parágrafo; linhas curtas sem pontuação final são candidatas a título. Blocos longos são subdivididos para controlar memória, sem alterar o original. A sincronização é por bloco/frase, não palavra a palavra. Textos com muitas abreviações, código ou listas podem precisar de pausas personalizadas. Não existe limite arbitrário de linhas, mas memória e velocidade dependem do tamanho do documento e do computador.
+Títulos/parágrafos usam heurísticas: linhas não vazias definem parágrafos e linhas curtas sem pontuação final podem ser títulos. Frases extensas são subdivididas preservando o original. Sincronização por frase/bloco, sem marcação por palavra. Naturalidade depende da voz; use a prévia. Memória e tempo dependem do documento/computador.
 
-O instalador não tem assinatura Authenticode nem atualização automática. Nenhuma publicação externa foi feita. A naturalidade da voz é subjetiva: use a prévia para escolher. A distribuição é inicial e requer validação de uso diário, de tecnologias assistivas e de instalação numa máquina Windows limpa antes de ampla distribuição.
+Pendentes: instalação/desinstalação em Windows limpo, assinatura digital, avaliação assistiva completa, múltiplos monitores/DPI e uso prolongado. Exportação WAV/MP3, IA/resumos, nuvem, sincronização e versão web permanecem fora do escopo.
 
-Para desinstalar, use **Aplicativos instalados → Leitor → Desinstalar**. A biblioteca e as vozes baixadas são preservadas. Feche o aplicativo antes de atualizar ou desinstalar.
+- **1.2.1:** correção da barra, transporte com solicitação mais recente, preservação de pausa/progresso e recuperação de falhas.
+- **1.2.0:** modernização completa, atalhos/ajuda, fortalecimento da segurança e otimização da timeline/temas.
+- **1.1.0:** Piper/PowerShell corrigidos, tema de livro, organização das configurações, pontuação, reinício e progresso mais preciso.
+- **1.0.0:** versão desktop inicial.
+
+Veja `CHANGELOG.md` para detalhes.

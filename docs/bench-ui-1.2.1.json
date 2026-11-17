@@ -1,0 +1,38 @@
+[
+  {
+    "version": "1.2.0",
+    "startupReadyMs": 909.1255,
+    "idleCpuMsIn2s": 234.375,
+    "processWorkingSetMb": 145.2890625
+  },
+  {
+    "version": "1.2.1",
+    "startupReadyMs": 949.5301,
+    "idleCpuMsIn2s": 578.125,
+    "processWorkingSetMb": 145.0234375
+  },
+  {
+    "version": "1.2.0",
+    "startupReadyMs": 953.2572,
+    "idleCpuMsIn2s": 593.75,
+    "processWorkingSetMb": 144.60546875
+  },
+  {
+    "version": "1.2.1",
+    "startupReadyMs": 981.2291,
+    "idleCpuMsIn2s": 296.875,
+    "processWorkingSetMb": 144.84765625
+  },
+  {
+    "version": "1.2.0",
+    "startupReadyMs": 948.0251,
+    "idleCpuMsIn2s": 93.75,
+    "processWorkingSetMb": 144.98828125
+  },
+  {
+    "version": "1.2.1",
+    "startupReadyMs": 978.8617,
+    "idleCpuMsIn2s": 62.5,
+    "processWorkingSetMb": 144.84375
+  }
+]

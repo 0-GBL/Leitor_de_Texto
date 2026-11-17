@@ -4,6 +4,7 @@ using System.Speech.Synthesis;
 using System.Text;
 using System.Text.Json;
 using System.Security;
+using System.Collections.Concurrent;
 using Leitor.Core;
 
 namespace Leitor.Services;
@@ -62,6 +63,8 @@ public sealed class PiperSpeechEngine : ISpeechEngine, IDisposable
         var info = new ProcessStartInfo(Path.Combine(AppPaths.Runtime, "python.exe"))
         { UseShellExecute = false, CreateNoWindow = true, RedirectStandardInput = true, RedirectStandardOutput = true, RedirectStandardError = true, StandardInputEncoding = new UTF8Encoding(false), StandardOutputEncoding = new UTF8Encoding(false) };
         info.ArgumentList.Add("-u"); info.ArgumentList.Add(Path.Combine(AppContext.BaseDirectory, "runtime", "piper_worker.py"));
+        info.Environment["PYTHONNOUSERSITE"] = "1";
+        info.Environment["HF_HUB_OFFLINE"] = "1";
         worker = Process.Start(info) ?? throw new InvalidOperationException("Não foi possível iniciar o Piper.");
         // Drain stderr to prevent native runtime diagnostics from blocking the pipe. No text logs are kept.
         worker.ErrorDataReceived += (_, _) => { }; worker.BeginErrorReadLine();
@@ -83,20 +86,23 @@ public sealed class PiperSpeechEngine : ISpeechEngine, IDisposable
         }
         finally { gate.Release(); }
     }
-    public void Dispose() { try { if (worker is { HasExited: false }) worker.Kill(true); } catch (InvalidOperationException) { } worker?.Dispose(); }
+    public void Dispose() { try { if (worker is { HasExited: false }) worker.Kill(true); } catch (InvalidOperationException) { } worker?.Dispose(); worker = null; }
 }
 public sealed class SpeechService : ISpeechEngine, IDisposable
 {
+    public void ReleasePiper() { piper.Dispose(); failedVoices.Clear(); }
     private readonly WindowsSpeechEngine windows = new();
     private readonly PiperSpeechEngine piper = new();
+    private readonly ConcurrentDictionary<string, byte> failedVoices = new();
     public event Action<string>? Notice;
     public async Task<byte[]> GenerateAsync(string text, SpeechOptions options, CancellationToken token)
     {
         if (options.Voice?.Engine != "Piper") return await windows.GenerateAsync(text, options, token);
+        if (failedVoices.ContainsKey(options.Voice.Id)) return await windows.GenerateAsync(text, options with { Voice = null }, token);
         try { return await piper.GenerateAsync(text, options, token); }
         catch (Exception e) when (e is not OperationCanceledException && !token.IsCancellationRequested)
         {
-            Notice?.Invoke("Piper indisponível; usando a voz do Windows. " + e.Message);
+            if (failedVoices.TryAdd(options.Voice.Id, 0)) Notice?.Invoke("Piper indisponível; usando a voz do Windows nesta sessão. Verifique ou repare a voz em Vozes offline.");
             return await windows.GenerateAsync(text, options with { Voice = null }, token);
         }
     }

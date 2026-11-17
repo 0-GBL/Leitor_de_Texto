@@ -10,12 +10,12 @@ Verificação realizada em 17/11/2026. O código deste projeto é oferecido sob 
 | SQLitePCLRaw | versões registradas no lock NuGet | Apache-2.0: https://github.com/ericsink/SQLitePCL.raw/blob/master/LICENSE.TXT |
 | System.Speech | 10.0.0 | MIT: https://www.nuget.org/packages/System.Speech/10.0.0 |
 | NAudio | 2.2.1 | MIT: https://github.com/naudio/NAudio/blob/master/license.txt |
-| Python | 3.11.9 embutido, opcional | PSF e avisos incluídos no runtime: https://docs.python.org/3.11/license.html |
+| Python | 3.14.10 embutido, opcional | PSF e avisos incluídos no runtime: https://docs.python.org/3.14/license.html |
 | Piper TTS | 1.8.0, opcional | GPL-3.0-or-later: https://github.com/OHF-Voice/piper1-gpl/blob/v1.8.0/COPYING ; política: https://github.com/OHF-Voice/piper1-gpl/blob/main/docs/LICENSING.md |
 | ONNX Runtime | 1.32.0, dependência do Piper testada | MIT e avisos: https://github.com/microsoft/onnxruntime/blob/main/LICENSE |
 | eSpeak NG / componentes do Piper | incluídos no wheel Piper | GPL e avisos do pacote: https://github.com/espeak-ng/espeak-ng/blob/master/COPYING |
 
-O instalador de recursos baixa pacotes do PyPI com as versões fixadas em `runtime/piper-requirements.txt`, incluindo as dependências transitivas do Piper. O ambiente testado também está registrado em `docs/piper-tested-requirements.txt`. A aplicação em C# usa arquivos de lock NuGet. Ao redistribuir um ambiente Python pré-instalado, preserve todos os arquivos LICENSE, COPYING e dist-info e confira suas obrigações.
+O instalador de recursos baixa pacotes do PyPI com as versões e hashes SHA-256 fixados em `runtime/piper-requirements.txt`, incluindo as dependências transitivas do Piper. O ambiente testado também está registrado em `docs/piper-tested-requirements.txt`. A aplicação em C# usa arquivos de lock NuGet. Ao redistribuir um ambiente Python pré-instalado, preserve todos os arquivos LICENSE, COPYING e dist-info e confira suas obrigações.
 
 ## Modelos do catálogo
 

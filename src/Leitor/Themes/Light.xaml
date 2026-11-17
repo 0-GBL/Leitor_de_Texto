@@ -2,7 +2,7 @@
  <SolidColorBrush x:Key="BackgroundBrush" Color="#F5EFE4"/>
  <SolidColorBrush x:Key="SurfaceBrush" Color="#FFFBF5"/>
  <SolidColorBrush x:Key="TextBrush" Color="#302820"/>
- <SolidColorBrush x:Key="MutedBrush" Color="#6A5948"/>
+ <SolidColorBrush x:Key="MutedBrush" Color="#75685A"/>
  <SolidColorBrush x:Key="BorderBrush" Color="#DED0BD"/>
  <SolidColorBrush x:Key="AccentBrush" Color="#79583D"/>
  <SolidColorBrush x:Key="HighlightBrush" Color="#F5DDA0"/>
@@ -10,4 +10,4 @@
  <SolidColorBrush x:Key="InputTextBrush" Color="#302820"/>
  <SolidColorBrush x:Key="InputBackgroundBrush" Color="#FFFBF5"/>
  <SolidColorBrush x:Key="OnAccentBrush" Color="#FFFFFF"/>
-</ResourceDictionary>
+<SolidColorBrush x:Key="HoverBrush" Color="#F3E9DB"/><SolidColorBrush x:Key="SelectionBrush" Color="#EFE2D0"/></ResourceDictionary>

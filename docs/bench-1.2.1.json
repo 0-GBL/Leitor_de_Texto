@@ -1,0 +1,82 @@
+{
+  "version": "1.2.1",
+  "engine": "WAV sint\u00E9tico local de 2 s; gera\u00E7\u00E3o n\u00E3o cooperativa de 40 ms; volume zero",
+  "soak": false,
+  "rows": [
+    {
+      "words": 1000,
+      "sentences": 100,
+      "splitMedianMs": 0.27,
+      "splitAllocatedMb": 0.07867685953776042,
+      "loadMs": 10.8141,
+      "firstAudioMs": 162.8324,
+      "navigationRequests": 20,
+      "navigationMs": 145.9545,
+      "synthesisCallsForNavigation": 1,
+      "stopMs": 4.9342,
+      "cpuMsDuringNavigation": 0,
+      "workingSetAfterMb": 41.328125,
+      "workingSetChangeMb": 1.6796875
+    },
+    {
+      "words": 5000,
+      "sentences": 500,
+      "splitMedianMs": 0.3632,
+      "splitAllocatedMb": 0.37477366129557294,
+      "loadMs": 0.218,
+      "firstAudioMs": 86.4611,
+      "navigationRequests": 20,
+      "navigationMs": 135.2243,
+      "synthesisCallsForNavigation": 1,
+      "stopMs": 5.6859,
+      "cpuMsDuringNavigation": 0,
+      "workingSetAfterMb": 42.1640625,
+      "workingSetChangeMb": 0.48828125
+    },
+    {
+      "words": 10000,
+      "sentences": 1000,
+      "splitMedianMs": 1.3095,
+      "splitAllocatedMb": 0.7490259806315104,
+      "loadMs": 0.1282,
+      "firstAudioMs": 76.8247,
+      "navigationRequests": 20,
+      "navigationMs": 120.4183,
+      "synthesisCallsForNavigation": 1,
+      "stopMs": 3.6223,
+      "cpuMsDuringNavigation": 0,
+      "workingSetAfterMb": 44.1484375,
+      "workingSetChangeMb": 0.41796875
+    },
+    {
+      "words": 25000,
+      "sentences": 2500,
+      "splitMedianMs": 3.475,
+      "splitAllocatedMb": 1.9186121622721355,
+      "loadMs": 0.2736,
+      "firstAudioMs": 84.5467,
+      "navigationRequests": 20,
+      "navigationMs": 131.9427,
+      "synthesisCallsForNavigation": 1,
+      "stopMs": 3.7436,
+      "cpuMsDuringNavigation": 31.25,
+      "workingSetAfterMb": 50.60546875,
+      "workingSetChangeMb": 0.4921875
+    },
+    {
+      "words": 50000,
+      "sentences": 5000,
+      "splitMedianMs": 4.7956,
+      "splitAllocatedMb": 3.8365656534830728,
+      "loadMs": 0.5579,
+      "firstAudioMs": 75.5418,
+      "navigationRequests": 20,
+      "navigationMs": 132.6596,
+      "synthesisCallsForNavigation": 1,
+      "stopMs": 4.0484,
+      "cpuMsDuringNavigation": 93.75,
+      "workingSetAfterMb": 53.53125,
+      "workingSetChangeMb": 0.09375
+    }
+  ]
+}

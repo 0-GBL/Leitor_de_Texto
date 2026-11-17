@@ -13,65 +13,13 @@ public static class AppPaths
     public static string Runtime => Path.Combine(Root, "piper");
     public static string Voices => Path.Combine(Root, "voices");
 }
-public sealed class Vault : IDisposable
-{
-    private readonly string path;
-    private byte[]? key;
-    public bool Configured => File.Exists(path);
-    public bool Unlocked => key != null;
-    private sealed record Envelope(string Salt, string Wrapped);
-    public Vault(string directory) { Directory.CreateDirectory(directory); path = Path.Combine(directory, "vault.json"); }
-    public void Create(string pin)
-    {
-        if (Configured) throw new InvalidOperationException("Já existe um PIN. Desative-o antes de cadastrar outro.");
-        if (pin.Length < 6 || !pin.All(char.IsAsciiDigit)) throw new InvalidOperationException("Use um PIN com pelo menos 6 dígitos.");
-        byte[] salt = RandomNumberGenerator.GetBytes(32), master = RandomNumberGenerator.GetBytes(32);
-        byte[] derived = Rfc2898DeriveBytes.Pbkdf2(pin, salt, 600_000, HashAlgorithmName.SHA256, 32);
-        try
-        {
-            byte[] wrapped = Encrypt(master, derived);
-            byte[] protectedBytes = ProtectedData.Protect(wrapped, null, DataProtectionScope.CurrentUser);
-            File.WriteAllText(path + ".tmp", JsonSerializer.Serialize(new Envelope(Convert.ToBase64String(salt), Convert.ToBase64String(protectedBytes))));
-            File.Move(path + ".tmp", path, true); key = master;
-        }
-        finally { CryptographicOperations.ZeroMemory(derived); }
-    }
-    public bool Unlock(string pin)
-    {
-        var e = JsonSerializer.Deserialize<Envelope>(File.ReadAllText(path))!;
-        byte[] derived = Rfc2898DeriveBytes.Pbkdf2(pin, Convert.FromBase64String(e.Salt), 600_000, HashAlgorithmName.SHA256, 32);
-        try
-        {
-            var wrapped = ProtectedData.Unprotect(Convert.FromBase64String(e.Wrapped), null, DataProtectionScope.CurrentUser);
-            var next = Decrypt(wrapped, derived); Lock(); key = next; return true;
-        }
-        catch (CryptographicException) { return false; }
-        finally { CryptographicOperations.ZeroMemory(derived); }
-    }
-    public byte[] Seal(byte[] value) => Encrypt(value, key ?? throw new InvalidOperationException("Desbloqueie com o PIN."));
-    public byte[] Open(byte[] value) => Decrypt(value, key ?? throw new InvalidOperationException("Desbloqueie com o PIN."));
-    public void Lock() { if (key != null) CryptographicOperations.ZeroMemory(key); key = null; }
-    public void Remove() { Lock(); File.Delete(path); }
-    public void Dispose() => Lock();
-    private static byte[] Encrypt(byte[] data, byte[] secret)
-    {
-        byte[] output = new byte[28 + data.Length]; RandomNumberGenerator.Fill(output.AsSpan(0, 12));
-        using var aes = new AesGcm(secret, 16); aes.Encrypt(output.AsSpan(0, 12), data, output.AsSpan(28), output.AsSpan(12, 16)); return output;
-    }
-    private static byte[] Decrypt(byte[] data, byte[] secret)
-    {
-        if (data.Length < 28) throw new CryptographicException("Dados protegidos inválidos.");
-        byte[] output = new byte[data.Length - 28];
-        using var aes = new AesGcm(secret, 16); aes.Decrypt(data.AsSpan(0, 12), data.AsSpan(28), data.AsSpan(12, 16), output); return output;
-    }
-}
 public sealed class LibraryStore
 {
     private readonly string connectionString;
     private readonly Vault vault;
     public LibraryStore(string directory, Vault vault)
     {
-        Directory.CreateDirectory(directory); this.vault = vault;
+        AtomicFiles.EnsurePrivateDirectory(directory); this.vault = vault;
         connectionString = new SqliteConnectionStringBuilder { DataSource = Path.Combine(directory, "library.db"), Pooling = false }.ToString();
         using var db = Connect(); using var cmd = db.CreateCommand();
         cmd.CommandText = "PRAGMA journal_mode=DELETE; PRAGMA secure_delete=ON; CREATE TABLE IF NOT EXISTS documents(id TEXT PRIMARY KEY, protected INTEGER NOT NULL, payload BLOB NOT NULL); PRAGMA user_version=1;"; cmd.ExecuteNonQuery();
@@ -79,11 +27,13 @@ public sealed class LibraryStore
     private SqliteConnection Connect() { var db = new SqliteConnection(connectionString); db.Open(); using var c = db.CreateCommand(); c.CommandText = "PRAGMA secure_delete=ON; PRAGMA busy_timeout=5000;"; c.ExecuteNonQuery(); return db; }
     public void Save(Document document)
     {
+        if (document.IsUnavailable) throw new InvalidOperationException("Documento indisponível não pode ser sobrescrito.");
         byte[] data = JsonSerializer.SerializeToUtf8Bytes(document);
-        if (document.Protected) data = vault.Seal(data);
+        if (document.Protected) { var plain = data; try { data = vault.Seal(plain, document.Id); } finally { CryptographicOperations.ZeroMemory(plain); } }
         using var db = Connect(); using var cmd = db.CreateCommand();
         cmd.CommandText = "INSERT INTO documents VALUES($id,$p,$v) ON CONFLICT(id) DO UPDATE SET protected=$p,payload=$v";
-        cmd.Parameters.AddWithValue("$id", document.Id); cmd.Parameters.AddWithValue("$p", document.Protected ? 1 : 0); cmd.Parameters.AddWithValue("$v", data); cmd.ExecuteNonQuery();
+        cmd.Parameters.AddWithValue("$id", document.Id); cmd.Parameters.AddWithValue("$p", document.Protected ? 1 : 0); cmd.Parameters.AddWithValue("$v", data);
+        using var tx = db.BeginTransaction(); cmd.Transaction = tx; cmd.ExecuteNonQuery(); tx.Commit();
     }
     public List<Document> Load()
     {
@@ -92,9 +42,19 @@ public sealed class LibraryStore
         while (rows.Read())
         {
             bool secure = rows.GetBoolean(1);
-            if (secure && !vault.Unlocked) { result.Add(new() { Id = rows.GetString(0), Title = "Texto protegido", Protected = true }); continue; }
-            byte[] bytes = (byte[])rows[2]; if (secure) bytes = vault.Open(bytes);
-            result.Add(JsonSerializer.Deserialize<Document>(bytes)!);
+            if (secure && !vault.Unlocked) { result.Add(new() { Id = rows.GetString(0), Title = "Texto protegido", Protected = true, IsLocked = true }); continue; }
+            byte[] bytes = (byte[])rows[2]; byte[]? plain = null;
+            try
+            {
+                if (!secure && bytes.AsSpan().StartsWith("LVR2"u8)) throw new CryptographicException("Metadados alterados.");
+                plain = secure ? vault.Open(bytes, rows.GetString(0)) : bytes;
+                var doc = JsonSerializer.Deserialize<Document>(plain) ?? throw new JsonException();
+                if (doc.Id != rows.GetString(0) || doc.Protected != secure) throw new CryptographicException("Identidade inválida.");
+                result.Add(doc);
+            }
+            catch (Exception error) when (error is CryptographicException or JsonException or FormatException)
+            { result.Add(new() { Id = rows.GetString(0), Title = "Documento indisponível", Protected = secure, IsUnavailable = true }); }
+            finally { if (secure && plain != null) CryptographicOperations.ZeroMemory(plain); }
         }
         return result.OrderByDescending(x => x.Saved).ToList();
     }
@@ -103,6 +63,7 @@ public sealed class LibraryStore
     {
         if (!vault.Unlocked) throw new InvalidOperationException("Desbloqueie antes de desativar a proteção.");
         var docs = Load(); using var db = Connect(); using var tx = db.BeginTransaction();
+        if (docs.Any(x => x.IsUnavailable)) throw new InvalidOperationException("Há documentos com integridade inválida. A proteção foi mantida para evitar perda de dados.");
         foreach (var doc in docs.Where(x => x.Protected))
         {
             doc.Protected = false; using var cmd = db.CreateCommand(); cmd.Transaction = tx;
@@ -115,7 +76,12 @@ public sealed class LibraryStore
 public sealed class SettingsStore
 {
     private readonly string path;
-    public SettingsStore(string root) { Directory.CreateDirectory(root); path = Path.Combine(root, "settings.json"); }
-    public Settings Load() => File.Exists(path) ? JsonSerializer.Deserialize<Settings>(File.ReadAllText(path)) ?? new() : new();
-    public void Save(Settings settings) { File.WriteAllText(path + ".tmp", JsonSerializer.Serialize(settings, new JsonSerializerOptions { WriteIndented = true })); File.Move(path + ".tmp", path, true); }
+    public SettingsStore(string root) { AtomicFiles.EnsurePrivateDirectory(root); path = Path.Combine(root, "settings.json"); }
+    public Settings Load()
+    {
+        if (!File.Exists(path)) return new();
+        try { var settings = JsonSerializer.Deserialize<Settings>(File.ReadAllText(path)) ?? new(); settings.Normalize(); return settings; }
+        catch (JsonException) { File.Copy(path, path + ".invalid-" + DateTime.UtcNow.ToString("yyyyMMddHHmmssfff"), false); return new(); }
+    }
+    public void Save(Settings settings) { settings.Normalize(); AtomicFiles.Write(path, JsonSerializer.SerializeToUtf8Bytes(settings, new JsonSerializerOptions { WriteIndented = true })); }
 }

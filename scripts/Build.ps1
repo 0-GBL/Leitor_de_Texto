@@ -21,6 +21,7 @@ if ($Package) {
     Copy-Item -LiteralPath LICENSE -Destination artifacts/Leitor-portatil/LICENSE.txt
     Copy-Item -LiteralPath THIRD-PARTY-NOTICES.md -Destination artifacts/Leitor-portatil/
     Copy-Item -LiteralPath README.md -Destination artifacts/Leitor-portatil/
+    Copy-Item -LiteralPath CHANGELOG.md -Destination artifacts/Leitor-portatil/
     New-Item -ItemType Directory -Force -Path artifacts/Leitor-portatil/docs | Out-Null
     Get-ChildItem -LiteralPath docs -File | Copy-Item -Destination artifacts/Leitor-portatil/docs -Force
     Compress-Archive -Path 'artifacts/Leitor-portatil/*' -DestinationPath artifacts/Leitor-portatil.zip -Force
@@ -34,13 +35,14 @@ if ($Package) {
     if (Test-Path -LiteralPath $sourceArchive) { Remove-Item -LiteralPath $sourceArchive }
     $sourceZip = [IO.Compression.ZipFile]::Open($sourceArchive, [IO.Compression.ZipArchiveMode]::Create)
     try {
-        $sourceFiles = Get-ChildItem -LiteralPath src,tests,installer,runtime,scripts,docs -Recurse -File | Where-Object { $_.FullName -notmatch '\\(bin|obj)\\' }
-        $sourceFiles += Get-Item -LiteralPath LICENSE,README.md,THIRD-PARTY-NOTICES.md,Directory.Build.props,NuGet.Config,Iniciar.cmd,.gitignore
+        $sourceFiles = Get-ChildItem -LiteralPath src,tests,installer,runtime,scripts,docs,shared -Recurse -File | Where-Object { $_.FullName -notmatch '\\(bin|obj|__pycache__|piper|voices)\\' -and $_.Name -notmatch '\.(db|onnx|part|pyc)$|^(vault|settings)\.json$|^auth-state\.bin$' }
+        $sourceFiles += Get-Item -LiteralPath LICENSE,README.md,CHANGELOG.md,THIRD-PARTY-NOTICES.md,Directory.Build.props,NuGet.Config,Iniciar.cmd,.gitignore
         foreach ($file in $sourceFiles) {
             $entryName = $file.FullName.Substring($projectRoot.TrimEnd('\').Length + 1).Replace('\', '/')
             [IO.Compression.ZipFileExtensions]::CreateEntryFromFile($sourceZip, $file.FullName, $entryName) | Out-Null
         }
     } finally { $sourceZip.Dispose() }
+    Copy-Item -LiteralPath docs/VALIDACAO.md -Destination artifacts/RELATORIO-VALIDACAO-1.2.1.md -Force
     Get-FileHash artifacts/Leitor-Instalador.exe,artifacts/Leitor-portatil.zip,artifacts/Leitor-codigo-fonte.zip -Algorithm SHA256 | ForEach-Object { "$($_.Hash)  $([IO.Path]::GetFileName($_.Path))" } | Set-Content -LiteralPath artifacts/SHA256SUMS.txt
     Get-FileHash artifacts/Leitor-Instalador.exe,artifacts/Leitor-portatil.zip -Algorithm SHA256 | Format-Table -AutoSize
 }
