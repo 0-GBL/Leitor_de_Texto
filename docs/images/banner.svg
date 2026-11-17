@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1240" height="310" viewBox="0 0 1240 310" role="img" aria-labelledby="title description">
+ <title id="title">Leitor de Texto</title>
+ <desc id="description">Seu tempo, seu ritmo, sua leitura. Identidade de livro em bege, com um livro aberto e ondas de áudio.</desc>
+ <rect width="1240" height="310" rx="22" fill="#F5EFE4"/>
+ <rect x="1" y="1" width="1238" height="308" rx="21" fill="none" stroke="#DED0BD"/>
+ <path d="M870 0h348q22 0 22 22v266q0 22-22 22H870z" fill="#EFE2D0"/>
+ <rect x="58" y="67" width="98" height="98" rx="26" fill="#79583D"/>
+ <g transform="translate(74 82) scale(2.8)" fill="none" stroke="#FFFBF5" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M3 5Q7 3 12 6Q17 3 21 5V20Q17 18 12 21Q7 18 3 20ZM12 6V21"/>
+ </g>
+ <text x="188" y="106" fill="#302820" font-family="Segoe UI,Arial,sans-serif" font-size="45" font-weight="600">Leitor de Texto</text>
+ <text x="190" y="150" fill="#79583D" font-family="Segoe UI,Arial,sans-serif" font-size="23">Seu tempo, seu ritmo, sua leitura</text>
+ <path d="M60 207H805" stroke="#DED0BD"/>
+ <text x="60" y="247" fill="#75685A" font-family="Segoe UI,Arial,sans-serif" font-size="14" letter-spacing="1.7">TEXTOS EM ÁUDIO · VOZES LOCAIS · NO SEU RITMO</text>
+ <g stroke="#79583D" stroke-width="9" stroke-linecap="round">
+  <path d="M945 141v28M971 119v72M997 96v118M1023 126v58M1049 110v90M1075 135v40M1101 121v68M1127 143v24"/>
+ </g>
+ <text x="1035" y="257" fill="#79583D" font-family="Segoe UI,Arial,sans-serif" font-size="13" text-anchor="middle" letter-spacing="2">LEITURA LOCAL</text>
+</svg>
