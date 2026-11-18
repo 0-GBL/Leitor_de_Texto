@@ -1,5 +1,14 @@
 # Histórico de versões
 
+## 1.3.0 — 17/11/2026
+
+- Biblioteca com pastas/subpastas, contagens, expansão, menus de contexto, mover por seletor ou arraste, prevenção de ciclos e exclusão com promoção de conteúdo ou confirmação de remoção total.
+- Visualizações, ordenações, busca global/subárvore combinada com etiquetas, localização dos resultados e preferências persistidas. Painel redimensionável e atalhos contextuais na ajuda F1.
+- Catálogo SQLite, índices, transações e páginas virtualizadas de 100 resumos. Corpos carregados sob demanda, consultas canceláveis em segundo plano e atualização econômica do autosave.
+- Estatísticas incrementais de caracteres/palavras/linhas lógicas e estimativa conforme velocidade/pausas.
+- Migração esquema 1 → 2 com backup consistente prévio e idempotência, preservando payloads/PIN/cofre. Associação de protegidos cifrada; nomes de pastas continuam públicos localmente. Algoritmos e motores de voz preservados.
+- 47 cenários aprovados, incluindo os 35 anteriores, WPF e escala de 140 a 10 mil documentos fictícios; relatórios de arquitetura, migração, desempenho e capturas atualizados.
+
 ## 1.2.1 — 17/11/2026
 
 - Corrigida a barra: clique direto, arraste com prévia, tempo real/estimado identificado, teclado/acessibilidade, cancelamento e confirmação única sem disputa com o temporizador.

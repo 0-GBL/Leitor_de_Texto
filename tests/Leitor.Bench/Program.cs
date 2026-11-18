@@ -20,6 +20,7 @@ internal static class Program
             return native == null ? IntPtr.Zero : NativeLibrary.Load(native);
         };
         var assembly = AssemblyLoadContext.Default.LoadFromAssemblyPath(dll);
+        if (args.Contains("--library")) { Console.WriteLine(JsonSerializer.Serialize(ProfileLibrary(assembly,args[0]),new JsonSerializerOptions{WriteIndented=true})); return; }
         if (args.Contains("--ui")) { Console.WriteLine(JsonSerializer.Serialize(ProfileUi(assembly, args[0]), new JsonSerializerOptions { WriteIndented = true })); return; }
         if (args.Contains("--study") || args.Contains("--soak")) { Console.WriteLine(JsonSerializer.Serialize(ProfileStudy(assembly, args[0], args.Contains("--soak")), new JsonSerializerOptions { WriteIndented = true })); return; }
         var processor = assembly.GetType("Leitor.Core.TextProcessor")!.GetMethod("Split")!;
@@ -47,6 +48,34 @@ internal static class Program
         double themeTime = themeWatch.Elapsed.TotalMilliseconds;
         double themeBytes = (GC.GetTotalAllocatedBytes(true) - themeAlloc) / 1024d;
         Console.WriteLine(JsonSerializer.Serialize(new { version = args[0], characters = text.Length, sentences = 120_000, splitMedianMs = times.Order().ElementAt(2), splitAllocatedMb = allocated, timelineQueries1000Ms = queries, themeSwitches50Ms = themeTime, themeAllocatedKb = themeBytes }, new JsonSerializerOptions { WriteIndented = true }));
+    }
+    private static object ProfileLibrary(Assembly assembly,string version)
+    {
+        var result=new List<object>();var connectionType=Assembly.Load("Microsoft.Data.Sqlite").GetType("Microsoft.Data.Sqlite.SqliteConnection")!;
+        foreach(int count in new[]{140,500,1000,5000,10000})
+        {
+            string directory=Path.Combine(Path.GetTempPath(),"Leitor-library-bench-"+Guid.NewGuid().ToString("N"));Directory.CreateDirectory(directory);
+            using(var db=(IDisposable)Activator.CreateInstance(connectionType,["Data Source="+Path.Combine(directory,"library.db")+";Pooling=False"])!)
+            {
+                dynamic connection=db;connection.Open();dynamic tx=connection.BeginTransaction();dynamic cmd=connection.CreateCommand();cmd.Transaction=tx;cmd.CommandText="CREATE TABLE documents(id TEXT PRIMARY KEY,protected INTEGER NOT NULL,payload BLOB NOT NULL);PRAGMA user_version=1;";cmd.ExecuteNonQuery();cmd.CommandText="INSERT INTO documents VALUES($id,0,$payload)";cmd.Parameters.AddWithValue("$id","");cmd.Parameters.AddWithValue("$payload",Array.Empty<byte>());
+                for(int i=0;i<count;i++){string id="doc-"+i;cmd.Parameters["$id"].Value=id;cmd.Parameters["$payload"].Value=JsonSerializer.SerializeToUtf8Bytes(new{Id=id,Title="Aula "+i,Tags="curso",Content=new string('x',2048),Saved=new DateTime(2026,1,1),Protected=false});cmd.ExecuteNonQuery();}tx.Commit();cmd.Dispose();tx.Dispose();
+            }
+            var vault=Activator.CreateInstance(assembly.GetType("Leitor.Services.Vault")!,[directory,null])!;var storeType=assembly.GetType("Leitor.Services.LibraryStore")!;
+            var migration=Stopwatch.StartNew();object store=Activator.CreateInstance(storeType,[directory,vault])!;double upgradeMs=migration.Elapsed.TotalMilliseconds;
+            var open=Stopwatch.StartNew();store=Activator.CreateInstance(storeType,[directory,vault])!;double normalOpenMs=open.Elapsed.TotalMilliseconds;
+            var queryType=assembly.GetType("Leitor.Services.LibraryQuery");var times=new List<double>();long allocated=GC.GetTotalAllocatedBytes(true);object? items=null;
+            for(int sample=0;sample<3;sample++)
+            {
+                var watch=Stopwatch.StartNew();
+                if(queryType==null)items=storeType.GetMethod("Load")!.Invoke(store,null)!;
+                else{object query=Activator.CreateInstance(queryType,["","","Todos os textos",null,"Toda a biblioteca","Modificação · recentes",0,100])!;object page=storeType.GetMethod("Query")!.Invoke(store,[query,CancellationToken.None])!;items=page.GetType().GetProperty("Items")!.GetValue(page)!;}
+                times.Add(watch.Elapsed.TotalMilliseconds);
+            }
+            double allocatedMb=(GC.GetTotalAllocatedBytes(true)-allocated)/3d/1048576;int returned=0;long textCharacters=0;
+            foreach(object doc in (System.Collections.IEnumerable)items!){returned++;textCharacters+=((string)doc.GetType().GetProperty("Content")!.GetValue(doc)!).Length;}
+            GC.KeepAlive(items);((IDisposable)vault).Dispose();result.Add(new{documents=count,initializationOrMigrationMs=upgradeMs,reopenMs=normalOpenMs,listMedianMs=times.Order().ElementAt(1),listAllocatedMb=allocatedMb,returnedRows=returned,retainedContentCharacters=textCharacters});
+        }
+        return new{version,fixture="Documentos fictícios de 2048 caracteres, JSON 1.2.1, sem pastas; carga inicial anterior versus página atual de 100 resumos",rows=result};
     }
     private static object ProfileStudy(Assembly assembly, string version, bool soak)
     {

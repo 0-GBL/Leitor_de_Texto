@@ -1,0 +1,51 @@
+{
+  "version": "1.3.0",
+  "fixture": "Documentos fict\u00EDcios de 2048 caracteres, JSON 1.2.1, sem pastas; carga inicial anterior versus p\u00E1gina atual de 100 resumos",
+  "rows": [
+    {
+      "documents": 140,
+      "initializationOrMigrationMs": 87.5321,
+      "reopenMs": 4.0854,
+      "listMedianMs": 12.2448,
+      "listAllocatedMb": 0.07562510172526042,
+      "returnedRows": 100,
+      "retainedContentCharacters": 0
+    },
+    {
+      "documents": 500,
+      "initializationOrMigrationMs": 83.8692,
+      "reopenMs": 3.7887,
+      "listMedianMs": 8.0903,
+      "listAllocatedMb": 0.06427256266276042,
+      "returnedRows": 100,
+      "retainedContentCharacters": 0
+    },
+    {
+      "documents": 1000,
+      "initializationOrMigrationMs": 100.5276,
+      "reopenMs": 1.9389,
+      "listMedianMs": 4.3206,
+      "listAllocatedMb": 0.06427256266276042,
+      "returnedRows": 100,
+      "retainedContentCharacters": 0
+    },
+    {
+      "documents": 5000,
+      "initializationOrMigrationMs": 554.8752,
+      "reopenMs": 3.9474,
+      "listMedianMs": 10.1448,
+      "listAllocatedMb": 0.06563313802083333,
+      "returnedRows": 100,
+      "retainedContentCharacters": 0
+    },
+    {
+      "documents": 10000,
+      "initializationOrMigrationMs": 1278.0774,
+      "reopenMs": 2.3318,
+      "listMedianMs": 5.8723,
+      "listAllocatedMb": 0.06404368082682292,
+      "returnedRows": 100,
+      "retainedContentCharacters": 0
+    }
+  ]
+}

@@ -13,7 +13,7 @@ public static class AppPaths
     public static string Runtime => Path.Combine(Root, "piper");
     public static string Voices => Path.Combine(Root, "voices");
 }
-public sealed class LibraryStore
+public sealed partial class LibraryStore
 {
     private readonly string connectionString;
     private readonly Vault vault;
@@ -21,19 +21,31 @@ public sealed class LibraryStore
     {
         AtomicFiles.EnsurePrivateDirectory(directory); this.vault = vault;
         connectionString = new SqliteConnectionStringBuilder { DataSource = Path.Combine(directory, "library.db"), Pooling = false }.ToString();
-        using var db = Connect(); using var cmd = db.CreateCommand();
-        cmd.CommandText = "PRAGMA journal_mode=DELETE; PRAGMA secure_delete=ON; CREATE TABLE IF NOT EXISTS documents(id TEXT PRIMARY KEY, protected INTEGER NOT NULL, payload BLOB NOT NULL); PRAGMA user_version=1;"; cmd.ExecuteNonQuery();
+        Migrate(directory);
     }
-    private SqliteConnection Connect() { var db = new SqliteConnection(connectionString); db.Open(); using var c = db.CreateCommand(); c.CommandText = "PRAGMA secure_delete=ON; PRAGMA busy_timeout=5000;"; c.ExecuteNonQuery(); return db; }
-    public void Save(Document document)
+    private SqliteConnection Connect() { var db = new SqliteConnection(connectionString); db.Open(); using var c = db.CreateCommand(); c.CommandText = "PRAGMA foreign_keys=ON; PRAGMA secure_delete=ON; PRAGMA busy_timeout=5000;"; c.ExecuteNonQuery(); return db; }
+    public void Save(Document document) => SaveCore(document, true);
+    private void SaveCore(Document document, bool preserveAssignment)
     {
-        if (document.IsUnavailable) throw new InvalidOperationException("Documento indisponível não pode ser sobrescrito.");
+        if (document.IsUnavailable || document.IsSummary || document.IsLocked) throw new InvalidOperationException("Abra o documento antes de editar.");
+        using var db = Connect(); using var tx = db.BeginTransaction();
+        if (preserveAssignment)
+        {
+            using var old = db.CreateCommand(); old.Transaction = tx; old.CommandText = "SELECT protected,payload FROM documents WHERE id=$id"; old.Parameters.AddWithValue("$id", document.Id);
+            using var reader = old.ExecuteReader();
+            if(reader.Read())
+            {
+                if(reader.GetBoolean(0)) { var previous = Decode(document.Id, true, (byte[])reader[1]); if(previous.IsUnavailable || previous.IsLocked) throw new InvalidOperationException("Desbloqueie um documento íntegro antes de gravar; original preservado."); document.FolderId = previous.FolderId; document.Created ??= previous.Created ?? previous.Saved; }
+                else { using var c=db.CreateCommand(); c.Transaction=tx; c.CommandText="SELECT folder,created FROM document_catalog WHERE id=$id"; c.Parameters.AddWithValue("$id",document.Id); using var r=c.ExecuteReader(); if(r.Read()){ document.FolderId=r.IsDBNull(0)?null:r.GetString(0); document.Created ??= CatalogDate(r.GetString(1)); } }
+            }
+        }
+        document.Created ??= document.Saved;
         byte[] data = JsonSerializer.SerializeToUtf8Bytes(document);
         if (document.Protected) { var plain = data; try { data = vault.Seal(plain, document.Id); } finally { CryptographicOperations.ZeroMemory(plain); } }
-        using var db = Connect(); using var cmd = db.CreateCommand();
-        cmd.CommandText = "INSERT INTO documents VALUES($id,$p,$v) ON CONFLICT(id) DO UPDATE SET protected=$p,payload=$v";
-        cmd.Parameters.AddWithValue("$id", document.Id); cmd.Parameters.AddWithValue("$p", document.Protected ? 1 : 0); cmd.Parameters.AddWithValue("$v", data);
-        using var tx = db.BeginTransaction(); cmd.Transaction = tx; cmd.ExecuteNonQuery(); tx.Commit();
+        using var cmd = db.CreateCommand(); cmd.Transaction=tx;
+        cmd.CommandText="INSERT INTO documents(id,protected,payload) VALUES($id,$p,$v) ON CONFLICT(id) DO UPDATE SET protected=$p,payload=$v";
+        cmd.Parameters.AddWithValue("$id",document.Id); cmd.Parameters.AddWithValue("$p",document.Protected?1:0); cmd.Parameters.AddWithValue("$v",data); cmd.ExecuteNonQuery();
+        Catalog(db,tx,document); tx.Commit();
     }
     public List<Document> Load()
     {
@@ -50,6 +62,7 @@ public sealed class LibraryStore
                 plain = secure ? vault.Open(bytes, rows.GetString(0)) : bytes;
                 var doc = JsonSerializer.Deserialize<Document>(plain) ?? throw new JsonException();
                 if (doc.Id != rows.GetString(0) || doc.Protected != secure) throw new CryptographicException("Identidade inválida.");
+                if (!secure) doc.FolderId = FolderOf(doc.Id);
                 result.Add(doc);
             }
             catch (Exception error) when (error is CryptographicException or JsonException or FormatException)
@@ -61,16 +74,17 @@ public sealed class LibraryStore
     public void Delete(string id) { using var db = Connect(); using var cmd = db.CreateCommand(); cmd.CommandText = "DELETE FROM documents WHERE id=$id"; cmd.Parameters.AddWithValue("$id", id); cmd.ExecuteNonQuery(); }
     public void DisableProtection()
     {
-        if (!vault.Unlocked) throw new InvalidOperationException("Desbloqueie antes de desativar a proteção.");
-        var docs = Load(); using var db = Connect(); using var tx = db.BeginTransaction();
-        if (docs.Any(x => x.IsUnavailable)) throw new InvalidOperationException("Há documentos com integridade inválida. A proteção foi mantida para evitar perda de dados.");
-        foreach (var doc in docs.Where(x => x.Protected))
+        if(!vault.Unlocked)throw new InvalidOperationException("Desbloqueie antes de desativar a proteção.");
+        using var db=Connect();using var tx=db.BeginTransaction();var ids=new List<(string Id,bool Protected)>();
+        using(var c=db.CreateCommand()){c.Transaction=tx;c.CommandText="SELECT id,protected FROM documents";using var r=c.ExecuteReader();while(r.Read())ids.Add((r.GetString(0),r.GetBoolean(1)));}
+        foreach(var entry in ids)
         {
-            doc.Protected = false; using var cmd = db.CreateCommand(); cmd.Transaction = tx;
-            cmd.CommandText = "UPDATE documents SET protected=0,payload=$v WHERE id=$id";
-            cmd.Parameters.AddWithValue("$id", doc.Id); cmd.Parameters.AddWithValue("$v", JsonSerializer.SerializeToUtf8Bytes(doc)); cmd.ExecuteNonQuery();
+            Document doc;using(var c=db.CreateCommand()){c.Transaction=tx;c.CommandText="SELECT payload FROM documents WHERE id=$id";c.Parameters.AddWithValue("$id",entry.Id);doc=Decode(entry.Id,entry.Protected,(byte[])c.ExecuteScalar()!);}
+            if(doc.IsUnavailable||doc.IsLocked)throw new InvalidOperationException("Há documentos com integridade inválida. A proteção foi mantida para evitar perda de dados.");
+            if(!entry.Protected)continue;
+            doc.Protected=false;doc.Created??=doc.Saved;using var update=db.CreateCommand();update.Transaction=tx;update.CommandText="UPDATE documents SET protected=0,payload=$v WHERE id=$id";update.Parameters.AddWithValue("$id",doc.Id);update.Parameters.AddWithValue("$v",JsonSerializer.SerializeToUtf8Bytes(doc));update.ExecuteNonQuery();Catalog(db,tx,doc);
         }
-        tx.Commit(); vault.Remove();
+        tx.Commit();vault.Remove();
     }
 }
 public sealed class SettingsStore

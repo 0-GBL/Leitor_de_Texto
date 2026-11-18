@@ -43,3 +43,6 @@ O banner SVG é um recurso editorial vetorial com a paleta/ícone de livro do ap
 - Este registro documenta as verificações e limitações da tarefa.
 
 Não foram reexecutados os 35 cenários de regressão nem os benchmarks: os números apresentados são os resultados já registrados. Não foram gerados novos instaladores ou alterados artefatos da versão 1.2.1. Os relatórios técnicos existentes e o CHANGELOG permanecem preservados.
+## Atualização 1.3.0 — 17/11/2026
+
+O registro acima corresponde à apresentação da 1.2.1. A entrega 1.3.0 também modifica o aplicativo, atualiza capturas reais com pastas fictícias, registra 47 cenários e acrescenta arquitetura/migração/desempenho. Informações autorizadas do desenvolvedor e documentos históricos foram mantidos. Nenhum commit ou publicação foi realizado.

@@ -27,4 +27,4 @@
  <Geometry x:Key="IconFolder">M3,5 L10,5 L12,8 L21,8 L21,21 L3,21 Z</Geometry>
  <Geometry x:Key="IconClose">M6,6 L18,18 M18,6 L6,18</Geometry>
  <Geometry x:Key="IconKey">M11,8 A5,5 0 1 1 1,8 A5,5 0 1 1 11,8 M11,8 L23,8 M18,8 L18,13 M22,8 L22,12</Geometry>
-</ResourceDictionary>
+<Geometry x:Key="IconSubfolder">M3,5 L9,5 L11,8 L21,8 L21,20 L3,20 Z M7,11 L7,15 L15,15 M12,12 L15,15 L12,18</Geometry></ResourceDictionary>

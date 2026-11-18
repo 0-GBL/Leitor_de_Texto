@@ -48,3 +48,7 @@ Instalador sem Authenticode e sem atualização automática; comparar SHA256SUMS
 ## Revisão preventiva 1.2.1 — 17/11/2026
 
 Mecanismos e formatos mantidos. A regressão voltou a conferir PIN desligado por padrão, espera persistente, troca de PIN, sessão, AAD, payload antigo, SQL parametrizado, extração e hashes. NuGet direto/transitivo e as sete versões PyPI foram reconsultados sem registros de vulnerabilidade nas fontes consultadas. Falha de gravação foi simulada em SQLite isolado; fechamento preserva editor/autosave. Falhas de áudio/Piper têm mensagens operacionais sem incluir caminhos/diagnósticos internos. Nenhuma alteração de segurança ou teste destrutivo ocorreu na biblioteca real. Veja VALIDACAO.md para a distinção entre simulações, testes de rede e ensaios físicos pendentes.
+
+## Complemento da 1.3.0
+
+Os algoritmos e o formato LVR2 permanecem. Pastas têm nomes/hierarquia locais não criptografados. Metadados e associação de documentos protegidos não são persistidos em claro no catálogo; contagens/busca exigem sessão desbloqueada para incluí-los. A migração copia o estado anterior sem descriptografar payloads. Backups antigos podem conter textos que só foram protegidos depois. [Arquitetura](BIBLIOTECA-1.3.0.md) · [Migração](MIGRACAO-1.3.0.md).

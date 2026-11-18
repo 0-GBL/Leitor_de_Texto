@@ -1,0 +1,57 @@
+[
+  {
+    "documents": 140,
+    "folders": 14,
+    "openMs": 4.4201,
+    "searchMs": 12.8303,
+    "folderLoadMs": 1.5324,
+    "moveAndSearchMs": 24.4803,
+    "allocatedMb": 3.0001220703125,
+    "workingSetMb": 169.10546875,
+    "cpuMs": 46.875
+  },
+  {
+    "documents": 500,
+    "folders": 14,
+    "openMs": 4.5591,
+    "searchMs": 49.0885,
+    "folderLoadMs": 2.4284,
+    "moveAndSearchMs": 60.2355,
+    "allocatedMb": 6.440834045410156,
+    "workingSetMb": 172.2421875,
+    "cpuMs": 203.125
+  },
+  {
+    "documents": 1000,
+    "folders": 20,
+    "openMs": 5.866,
+    "searchMs": 85.4252,
+    "folderLoadMs": 2.8126,
+    "moveAndSearchMs": 104.4744,
+    "allocatedMb": 11.248954772949219,
+    "workingSetMb": 176.23046875,
+    "cpuMs": 265.625
+  },
+  {
+    "documents": 5000,
+    "folders": 100,
+    "openMs": 6.2005,
+    "searchMs": 373.7606,
+    "folderLoadMs": 7.6694,
+    "moveAndSearchMs": 380.7491,
+    "allocatedMb": 50.27436828613281,
+    "workingSetMb": 150.1484375,
+    "cpuMs": 765.625
+  },
+  {
+    "documents": 10000,
+    "folders": 200,
+    "openMs": 6.0999,
+    "searchMs": 722.0673,
+    "folderLoadMs": 15.9931,
+    "moveAndSearchMs": 763.1737,
+    "allocatedMb": 99.60884857177734,
+    "workingSetMb": 155.140625,
+    "cpuMs": 1406.25
+  }
+]

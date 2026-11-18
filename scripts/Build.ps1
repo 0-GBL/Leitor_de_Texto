@@ -23,7 +23,7 @@ if ($Package) {
     Copy-Item -LiteralPath README.md -Destination artifacts/Leitor-portatil/
     Copy-Item -LiteralPath CHANGELOG.md -Destination artifacts/Leitor-portatil/
     New-Item -ItemType Directory -Force -Path artifacts/Leitor-portatil/docs | Out-Null
-    Get-ChildItem -LiteralPath docs -File | Copy-Item -Destination artifacts/Leitor-portatil/docs -Force
+    Copy-Item -Path 'docs/*' -Destination artifacts/Leitor-portatil/docs -Recurse -Force
     Compress-Archive -Path 'artifacts/Leitor-portatil/*' -DestinationPath artifacts/Leitor-portatil.zip -Force
     & $dotnetExe publish installer/Leitor.Setup.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o artifacts/Instalador
     if ($LASTEXITCODE -ne 0) { throw 'Instalador falhou.' }
@@ -42,7 +42,7 @@ if ($Package) {
             [IO.Compression.ZipFileExtensions]::CreateEntryFromFile($sourceZip, $file.FullName, $entryName) | Out-Null
         }
     } finally { $sourceZip.Dispose() }
-    Copy-Item -LiteralPath docs/VALIDACAO.md -Destination artifacts/RELATORIO-VALIDACAO-1.2.1.md -Force
+    Copy-Item -LiteralPath docs/VALIDACAO.md -Destination artifacts/RELATORIO-VALIDACAO-1.3.0.md -Force
     Get-FileHash artifacts/Leitor-Instalador.exe,artifacts/Leitor-portatil.zip,artifacts/Leitor-codigo-fonte.zip -Algorithm SHA256 | ForEach-Object { "$($_.Hash)  $([IO.Path]::GetFileName($_.Path))" } | Set-Content -LiteralPath artifacts/SHA256SUMS.txt
     Get-FileHash artifacts/Leitor-Instalador.exe,artifacts/Leitor-portatil.zip -Algorithm SHA256 | Format-Table -AutoSize
 }

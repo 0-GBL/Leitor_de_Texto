@@ -41,7 +41,7 @@ public sealed class SetupWindow : Window
         Title = "Instalar Leitor"; Width = 580; SizeToContent = SizeToContent.Height; ResizeMode = ResizeMode.NoResize; WindowStartupLocation = WindowStartupLocation.CenterScreen;
         FontFamily = new FontFamily("Segoe UI"); FontSize = 15; Background = new SolidColorBrush(Color.FromRgb(245, 239, 228)); Foreground = new SolidColorBrush(Color.FromRgb(48, 40, 32));
         var panel = new StackPanel { Margin = new(32) }; Content = panel;
-        panel.Children.Add(new TextBlock { Text = "Leitor 1.2.1", FontSize = 34, FontWeight = FontWeights.Bold });
+        panel.Children.Add(new TextBlock { Text = "Leitor 1.3.0", FontSize = 34, FontWeight = FontWeights.Bold });
         panel.Children.Add(new TextBlock { Text = "Seu tempo, seu ritmo, sua leitura", FontSize = 20, Margin = new(0, 6, 0, 20) });
         panel.Children.Add(new TextBlock { Text = "Leitura local para Windows 10/11 de 64 bits. Inclui o .NET necessário. Vozes neurais são instaladas opcionalmente dentro do aplicativo.\n\nInstalação para este usuário, sem privilégios de administrador.", TextWrapping = TextWrapping.Wrap });
         panel.Children.Add(new TextBlock { Text = destination, FontSize = 12, Margin = new(0, 16, 0, 4), TextWrapping = TextWrapping.Wrap });
@@ -69,7 +69,7 @@ public sealed class SetupWindow : Window
             if (shortcut) CreateShortcut(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), "Leitor.lnk"), exe);
             File.WriteAllText(Path.Combine(destination, "Desinstalar.ps1"), UninstallScript, System.Text.Encoding.UTF8);
             using var key = Registry.CurrentUser.CreateSubKey(@"Software\Microsoft\Windows\CurrentVersion\Uninstall\Leitor");
-            key.SetValue("DisplayName", "Leitor"); key.SetValue("DisplayVersion", "1.2.1"); key.SetValue("Publisher", "Projeto Leitor"); key.SetValue("InstallLocation", destination); key.SetValue("DisplayIcon", exe);
+            key.SetValue("DisplayName", "Leitor"); key.SetValue("DisplayVersion", "1.3.0"); key.SetValue("Publisher", "Projeto Leitor"); key.SetValue("InstallLocation", destination); key.SetValue("DisplayIcon", exe);
             key.SetValue("UninstallString", $"powershell.exe -NoProfile -ExecutionPolicy Bypass -File \"{Path.Combine(destination, "Desinstalar.ps1")}\"");
             key.SetValue("NoModify", 1); key.SetValue("NoRepair", 1);
             status.Text = "Instalação concluída. Abra o Leitor pelo menu Iniciar ou pelo atalho. Seus textos ficam em %LOCALAPPDATA%\\Leitor.";

@@ -18,7 +18,7 @@ public partial class MainWindow : Window
     public MainWindow() : this(new MainViewModel()) { }
     public MainWindow(MainViewModel model)
     {
-        InitializeComponent(); vm = model; DataContext = vm;
+        InitializeComponent(); vm = model; vm.EditorOwnsMetrics=true; DataContext = vm;
         Width = Math.Min(Width, SystemParameters.WorkArea.Width - 16); Height = Math.Min(Height, SystemParameters.WorkArea.Height - 16);
         vm.ThemeChanged += ApplyTheme;
         SystemEvents.PowerModeChanged += PowerChanged;
@@ -29,8 +29,14 @@ public partial class MainWindow : Window
     {
         if (LibraryColumn == null) return;
         bool compact = ActualWidth < 1100;
-        LibraryColumn.Width = new GridLength(compact ? 200 : 246); NarrationColumn.Width = new GridLength(compact ? 232 : 272); ContentColumn.MinWidth = compact ? 240 : 330;
+        NarrationColumn.Width = new GridLength(compact ? 232 : 272); ContentColumn.MinWidth = compact ? 240 : 330;
+        LibraryColumn.MaxWidth=Math.Max(200,Math.Min(520,ActualWidth-NarrationColumn.Width.Value-ContentColumn.MinWidth-80));
+        double desired=vm?.Settings.LibraryWidth??280;LibraryColumn.Width=new GridLength(Math.Clamp(double.IsFinite(desired)?desired:280,200,LibraryColumn.MaxWidth));
     }
+    public TextBox SearchBox=>Sidebar.SearchInput;
+    public new object FindName(string name)=>(name=="SearchBox"?SearchBox:name=="LibraryList"?Sidebar.FindName(name):base.FindName(name))!;
+    private void LibraryResized(object sender,System.Windows.Controls.Primitives.DragCompletedEventArgs e){if(vm==null)return;vm.Settings.LibraryWidth=LibraryColumn.ActualWidth;vm.SavePreferences();}
+    private void EditorTextChanged(object sender,TextChangedEventArgs e){if(vm!=null)vm.ApplyEditorStatistics(EditorBox.Text,e.Changes);}
     private void ApplyTheme()
     {
         if (vm == null) return;
@@ -87,6 +93,11 @@ public partial class MainWindow : Window
     {
         if (vm == null || e.Handled || e.IsRepeat) return;
         var focus = Keyboard.FocusedElement as DependencyObject;
+        if(Sidebar.IsKeyboardFocusWithin&&!IsEditing(focus))
+        {
+            ICommand? organization=Shortcuts.ResolveLibrary(e.Key,Keyboard.Modifiers,false) switch{"new"=>vm.NewFolderCommand,"move"=>vm.MoveItemCommand,"rename"=>vm.RenameItemCommand,_=>null};
+            if(organization!=null){e.Handled=true;if(organization.CanExecute(null))organization.Execute(null);return;}
+        }
         if (focus == Timeline && Timeline.IsInteracting && e.Key == Key.Escape) { Timeline.CancelInteraction(); e.Handled = true; return; }
         if (focus is ComboBox { IsDropDownOpen: true } && e.Key == Key.Escape) return;
         bool nativeSpace = focus is ButtonBase or Slider or ComboBox;

@@ -16,7 +16,7 @@ Leitura em áudio para estudar no seu ritmo, com vozes neurais locais e uma bibl
 
 [![Piper TTS](https://img.shields.io/badge/Piper_TTS-voz_neural-302820?style=flat-square)](src/Leitor/Services/SpeechEngines.cs)
 [![Windows](https://img.shields.io/badge/Windows-10%2F11_x64-302820?style=flat-square)](#instalação-e-primeiros-passos)
-[![Versão 1.2.1](https://img.shields.io/badge/versão-1.2.1-302820?style=flat-square)](CHANGELOG.md)
+[![Versão 1.3.0](https://img.shields.io/badge/versão-1.3.0-302820?style=flat-square)](CHANGELOG.md)
 [![GPL-3.0-or-later](https://img.shields.io/badge/licença-GPL--3.0--or--later-302820?style=flat-square)](LICENSE)
 [![Offline após preparar vozes](https://img.shields.io/badge/offline-após_preparar_as_vozes-302820?style=flat-square)](#vozes-neurais-e-uso-offline)
 
@@ -38,11 +38,11 @@ Três princípios orientam as decisões de implementação:
 | **Desempenho** | Reprodução progressiva, cancelamento e preparação do destino sem sintetizar o documento inteiro. |
 | **Naturalidade da voz** | Pontuação preservada, vozes neurais opcionais e pausas ajustáveis para diferentes ritmos de estudo. |
 
-O desenvolvimento reúne práticas demonstráveis de C#/WPF, MVVM, programação assíncrona, persistência, integração com processos locais, proteção de dados e testes de regressão. A versão atual é **1.2.1**; funcionalidades futuras estão separadas no [roadmap](#possibilidades-futuras).
+O desenvolvimento reúne práticas demonstráveis de C#/WPF, MVVM, programação assíncrona, persistência, integração com processos locais, proteção de dados e testes de regressão. A versão atual é **1.3.0**; funcionalidades futuras estão separadas no [roadmap](#possibilidades-futuras).
 
 ## Demonstração
 
-Capturas do conteúdo das **telas WPF reais da versão 1.2.1**, renderizadas em ambiente isolado, com textos e progresso fictícios. Não há documentos pessoais nas imagens. O player foi capturado parado, sem reproduzir áudio. [Procedência das capturas](docs/images/README.md).
+Capturas do conteúdo das **telas WPF reais da versão 1.3.0**, renderizadas em ambiente isolado, com textos e progresso fictícios. Não há documentos pessoais nas imagens. O player foi capturado parado, sem reproduzir áudio. [Procedência das capturas](docs/images/README.md).
 
 ### Tema claro · editor e biblioteca
 
@@ -59,7 +59,7 @@ Capturas do conteúdo das **telas WPF reais da versão 1.2.1**, renderizadas em 
 <details>
 <summary><strong>Ver biblioteca, atalhos, configurações e vozes neurais</strong></summary>
 
-**Biblioteca de textos** — títulos, etiquetas, data e progresso em uma coleção local.
+**Biblioteca hierárquica** — pastas e subpastas, contagens, localização, etiquetas e progresso, com painel redimensionável.
 
 <img src="docs/images/biblioteca.png" alt="Biblioteca com textos fictícios e indicadores de progresso" width="300" />
 
@@ -86,13 +86,14 @@ Capturas do conteúdo das **telas WPF reais da versão 1.2.1**, renderizadas em 
 | **Personalização** | Modos Natural, Rápida, Estudos e Personalizada; velocidade, volume, pausas e transição de voz. Tom disponível no motor Windows, conforme suporte da voz. |
 | **Reprodução** | Iniciar, pausar, continuar, reiniciar, prévia de voz, ±10 segundos, clique/arraste com prévia de tempo e navegação por parágrafos/títulos. |
 | **Acompanhamento** | Frase atual separada da seleção manual, destaque opcional e rolagem automática configurável. |
-| **Biblioteca** | Títulos, etiquetas, busca por título/conteúdo, filtro por etiqueta, exclusão com confirmação e indicadores de progresso/conclusão. |
+| **Biblioteca** | Pastas/subpastas, mover por menu/teclado/arraste, exclusão segura, páginas de resumos, busca global ou por pasta, etiquetas, ordenação e progresso. |
+| **Estatísticas** | Caracteres, palavras, linhas lógicas e tempo aproximado, com atualização incremental e respeito à velocidade/pausas. |
 | **Salvamento e retomada** | Autosave, salvamento manual e progresso independente por documento, com posição fracionária e durações conhecidas. |
 | **Privacidade** | Síntese local, PIN opcional, criptografia individual de documentos e bloqueio da sessão protegida. |
 | **Interface e produtividade** | Temas claro bege/escuro, fonte ajustável, foco visível, nomes acessíveis e central F1 com atalhos contextuais. |
 | **Uso offline** | Leitura sem conexão após preparar os recursos locais necessários; nenhuma conta ou serviço pago é exigido. |
 
-Na 1.2.1, a barra preserva reprodução, pausa ou parada e prioriza a solicitação mais recente. O símbolo **≈** identifica estimativas; o total e o percentual podem mudar conforme novos trechos são medidos. A sincronização é por frase/bloco, sem promessa de alinhamento por palavra ou amostra acústica. [Detalhes de reprodução](docs/REPRODUCAO-1.2.1.md).
+A barra preserva reprodução, pausa ou parada e prioriza a solicitação mais recente. O símbolo **≈** identifica estimativas; o total e o percentual podem mudar conforme novos trechos são medidos. A sincronização é por frase/bloco, sem promessa de alinhamento por palavra ou amostra acústica. [Detalhes de reprodução](docs/REPRODUCAO-1.2.1.md).
 
 ## Instalação e primeiros passos
 
@@ -128,6 +129,12 @@ O instalador atual **não tem assinatura Authenticode**; o Windows pode mostrar 
 3. Escolha uma voz e um modo de leitura. Use **Prévia** para experimentar a voz.
 4. Clique em **Ler texto** e abra **Acompanhar** para seguir as frases.
 5. Pause quando precisar e retome pelo mesmo documento da biblioteca. O salvamento é automático; **Ctrl+S** salva imediatamente.
+
+### Organizar a biblioteca
+
+Escolha **Pastas e subpastas** e crie uma pasta pelo botão ao lado de Biblioteca. O menu de contexto permite renomear, mover ou excluir. Para retirar um texto de uma pasta, mova-o para **Minha biblioteca**. A exclusão permite promover o conteúdo ao nível superior ou excluir tudo com confirmação adicional. O expansor **Filtros e ordenação** reúne etiqueta, escopo e ordem; a busca combina título/conteúdo com esses filtros. As contagens incluem subpastas e só incluem protegidos após desbloquear. [Guia da biblioteca](docs/BIBLIOTECA-1.3.0.md).
+
+Na primeira abertura de um banco antigo, a 1.3.0 faz backup local antes da migração e mantém os textos existentes sem pasta. Feche o Leitor antes de atualizar. [Migração e compatibilidade](docs/MIGRACAO-1.3.0.md).
 
 ### Vozes neurais e uso offline
 
@@ -195,6 +202,10 @@ Os comandos atuam somente dentro do Leitor. A tabela foi conferida com [Shortcut
 | **Ctrl+F** | Focar a busca da biblioteca. |
 | **Ctrl+vírgula** | Abrir configurações. |
 | **Enter na lista de frases** | Ir até a frase selecionada. |
+| **Ctrl+Shift+N na biblioteca** | Criar pasta, fora da edição. |
+| **F2 na biblioteca** | Renomear pasta ou documento selecionado, fora da edição. |
+| **Ctrl+Shift+M na biblioteca** | Mover o item selecionado pelo seletor de destino. |
+| **↑ / ↓ e ← / → nas pastas** | Selecionar; recolher/pai ou expandir. |
 | **F1** | Abrir a central de atalhos. |
 | **Tab / Shift+Tab** | Próximo/anterior controle. |
 | **Ctrl+Tab** | Sair do editor que aceita tabulação. |
@@ -216,22 +227,27 @@ Os textos e a síntese ficam no computador. A biblioteca usa SQLite e o **PIN é
 
 Não há recuperação do PIN. Copiar o cofre para outra conta/computador não basta para abrir os textos. A proteção não impede malware na mesma conta, administrador ou inspeção de memória desbloqueada. A limitação de tentativas pode ser contornada por quem controla os arquivos da conta; `secure_delete` não elimina backups/snapshots ou garante apagamento físico em SSD. Nenhuma certificação ou segurança absoluta é prometida.
 
-O formato protegido da 1.2.x lê documentos antigos; gravar com ele impede reabertura na 1.1 sem restaurar um backup compatível. [Revisão de segurança e limites](docs/SEGURANCA-1.2.md) · [Dados, PIN e procedimentos](docs/GUIA-DO-USUARIO.md#privacidade-e-segurança).
+Nomes e hierarquia de pastas são locais e **não criptografados**. A associação de um documento protegido à sua pasta fica no payload cifrado; buscas/contagens bloqueadas não revelam esses metadados. Não use nomes de pastas sensíveis se isso for um risco. [Arquitetura e privacidade](docs/BIBLIOTECA-1.3.0.md).
+
+O formato protegido da 1.2.x/1.3.0 lê documentos antigos; gravar com ele impede reabertura na 1.1 sem restaurar um backup compatível. [Revisão de segurança e limites](docs/SEGURANCA-1.2.md) · [Dados, PIN e procedimentos](docs/GUIA-DO-USUARIO.md#privacidade-e-segurança).
 
 ## Desempenho e validação
 
-Os números abaixo vêm dos relatórios existentes, não de novas execuções da suíte nesta tarefa de documentação.
+A 1.3.0 foi executada com **47 cenários aprovados e zero reprovados**, incluindo os 35 anteriores e 12 novos. Os dados de desempenho são sintéticos e não utilizam a biblioteca pessoal.
 
 | Versão | Registro de validação |
 | --- | --- |
 | **1.0.0** | 11 testes aprovados no histórico informado pelo autor; relatório dessa execução não está versionado neste repositório. |
 | **1.1.0** | [19 testes aprovados](docs/VALIDACAO-1.1.0.md), incluindo downloads reais. |
 | **1.2.0** | [25 testes aprovados](docs/VALIDACAO-1.2.0.md). |
-| **1.2.1** | [35 cenários distintos aprovados](docs/VALIDACAO.md): 34 testes locais e um download real reexecutado após timeout transitório. |
+| **1.2.1** | [35 cenários distintos aprovados](docs/VALIDACAO-1.2.1.md): 34 testes locais e um download real reexecutado após timeout transitório. |
+| **1.3.0** | [47 cenários aprovados](docs/VALIDACAO.md): regressão, migração, pastas, segurança, estatísticas, WPF e escala até 10 mil documentos fictícios. |
 
 As contagens agrupam cenários com várias assertivas e não representam percentual de cobertura. Os testes incluem áudio Windows/Piper, textos extensos, SQLite, compatibilidade, PIN/criptografia, temas, atalhos e comportamento WPF. A versão 1.2.1 acrescentou clique/arraste por coordenadas na lógica do controle, prévia congelada, navegação pausada, pedidos rápidos e recuperação de falhas.
 
-**Ensaio sintético de transporte, em 50.000 palavras:**
+**Biblioteca com 10 mil documentos de 2.048 caracteres:** a carga de todos os corpos na 1.2.1 levou 167,55 ms e alocou 64,222 MB; a primeira página de 100 resumos na 1.3.0 levou 5,87 ms e alocou 0,064 MB, sem conteúdos retidos na lista. São estratégias diferentes, não uma comparação de consultas equivalentes. A busca de conteúdo levou cerca de 0,72 s em segundo plano na suíte; a primeira migração/backup custou 1,28 s no benchmark. [Tabelas, memória e método da 1.3.0](docs/DESEMPENHO-1.3.0.md).
+
+**Ensaio histórico de transporte, em 50.000 palavras:**
 
 | Medida | 1.2.0 | 1.2.1 |
 | --- | ---: | ---: |
@@ -250,12 +266,12 @@ Também foram exercitados materiais de **1.000, 5.000, 10.000, 25.000 e 50.000 p
 
 ## Possibilidades futuras
 
-Ideias para avaliação, **sem compromisso de prazo ou implementação**. Nenhuma das funcionalidades abaixo faz parte da versão 1.2.1.
+Ideias para avaliação, **sem compromisso de prazo ou implementação**. Nenhuma das funcionalidades abaixo faz parte da versão 1.3.0.
 
 | Frente | Possibilidades |
 | --- | --- |
-| **Experiência de leitura** | Modo de concentração, marcadores, temporizador e contador de palavras/caracteres. |
-| **Biblioteca e formatos** | Backup da biblioteca, importação de PDF e documentos Word. |
+| **Experiência de leitura** | Modo de concentração, marcadores, temporizador e novos modos de revisão. |
+| **Biblioteca e formatos** | Backup manual/exportável da biblioteca, importação de PDF e documentos Word. |
 | **Áudio** | Exportação MP3/WAV e novos motores de voz neural. |
 | **Plataformas** | Versão web e aplicativo mobile. |
 
@@ -271,6 +287,7 @@ Uma expansão a avaliar: resumos inteligentes em texto/áudio, revisão de conte
 | **1.1.0** | Correções no Piper, pontuação, interface e precisão do progresso. |
 | **1.2.0** | Modernização visual, produtividade, atalhos e fortalecimento da segurança. |
 | **1.2.1** | Estabilidade, barra interativa, otimização e precisão da reprodução. |
+| **1.3.0** | Biblioteca hierárquica, busca por pasta, estatísticas, migração com backup e carregamento por resumos. |
 
 O [CHANGELOG.md](CHANGELOG.md) mantém os detalhes de cada atualização.
 
@@ -278,7 +295,9 @@ O [CHANGELOG.md](CHANGELOG.md) mantém os detalhes de cada atualização.
 
 - [Guia do usuário e desenvolvimento](docs/GUIA-DO-USUARIO.md) — instalação, modos, preferências, PIN e ambiente de testes.
 - [Reprodução e sincronização](docs/REPRODUCAO-1.2.1.md) — causa raiz da barra e decisões técnicas.
-- [Validação da 1.2.1](docs/VALIDACAO.md) e [desempenho](docs/DESEMPENHO-1.2.1.md) — evidências e pendências.
+- [Biblioteca e arquitetura](docs/BIBLIOTECA-1.3.0.md) e [migração](docs/MIGRACAO-1.3.0.md) — organização, catálogo, privacidade e compatibilidade.
+- [Validação da 1.3.0](docs/VALIDACAO.md) e [desempenho](docs/DESEMPENHO-1.3.0.md) — evidências, memória e pendências.
+- [Validação anterior](docs/VALIDACAO-1.2.1.md) e [desempenho anterior](docs/DESEMPENHO-1.2.1.md) — histórico preservado.
 - [Segurança](docs/SEGURANCA-1.2.md) e [dependências/licenças](THIRD-PARTY-NOTICES.md) — mecanismos, procedência e limites.
 - [Imagens e método de captura](docs/images/README.md) — telas reais com dados de demonstração.
 

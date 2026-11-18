@@ -1,6 +1,9 @@
 [← Voltar à apresentação do projeto](../README.md)
 
-# Guia do usuário e desenvolvimento — Leitor 1.2.1
+Atualizado para **1.3.0**. A organização por pastas, os novos atalhos, as estatísticas e a privacidade do catálogo estão no [guia da biblioteca](BIBLIOTECA-1.3.0.md). Antes de atualizar ou voltar de versão, leia [migração e backup](MIGRACAO-1.3.0.md). Os procedimentos de voz e reprodução abaixo permanecem aplicáveis.
+
+
+# Guia do usuário e desenvolvimento — Leitor 1.3.0
 
 Os comandos deste guia são executados na raiz do repositório. Para a apresentação do projeto e as imagens atuais, consulte o [README](../README.md).
 

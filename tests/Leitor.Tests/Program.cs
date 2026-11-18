@@ -19,7 +19,7 @@ using Microsoft.Data.Sqlite;
 using System.IO.Compression;
 using System.Windows.Input;
 
-static class Program
+static partial class Program
 {
     private static int passed;
     private static readonly List<string> failed = [];
@@ -350,8 +350,10 @@ static class Program
             byte[] next = service.GenerateAsync("A frase seguinte continua na voz local disponível.", options, timeout.Token).GetAwaiter().GetResult();
             Check(next.Length > 1000 && notices == 1, "Modelo inválido foi tentado novamente em cada frase");
         });
+        RunLibraryTests(root);
         Run("WPF: temas, configurações, modos, destaque independente e reiniciar", () => VerifyInterface(root));
         Run("WPF: barra acessível, teclado, prévia congelada, documentos e recuperação SQLite", () => VerifySeekingInterface(root));
+        Run("WPF biblioteca 1.3: pastas, menus, edição, contadores e preferências",()=>VerifyLibraryInterface(root));
         if (Environment.GetEnvironmentVariable("LEITOR_TEST_DOWNLOADS") == "1")
             Run("Download real de Faber e Edresson pelo mesmo serviço da interface", () =>
             {
@@ -380,7 +382,7 @@ static class Program
         Console.WriteLine($"RESULTADO: {passed} passaram, {failed.Count} falharam.");
         foreach (string f in failed) Console.WriteLine(f);
         // Only remove the isolated directory created above.
-        Directory.Delete(root, true); return failed.Count == 0 ? 0 : 1;
+        SqliteConnection.ClearAllPools(); Directory.Delete(root, true); return failed.Count == 0 ? 0 : 1;
     }
     private static void Run(string name, Action test) { if (testFilter != null && !name.Contains(testFilter, StringComparison.OrdinalIgnoreCase)) return; try { test(); passed++; Console.WriteLine("PASS: " + name); } catch (Exception e) { failed.Add("FAIL: " + name + " — " + e); } }
     private static void Check(bool condition, string message) { if (!condition) throw new Exception(message); }
@@ -430,7 +432,7 @@ static class Program
             Check(((TextBox)window.FindName("EditorBox")).FontWeight == FontWeights.Normal, "Texto do editor herdou peso do cabeçalho");
             Check(((TextBox)window.FindName("SearchBox")).ActualHeight < 55, "Padding duplicado no campo de busca");
             window.Width = 950; window.UpdateLayout();
-            Check(((ColumnDefinition)window.FindName("LibraryColumn")).ActualWidth == 200, "Layout compacto não adaptou os painéis");
+            Check(((ColumnDefinition)window.FindName("LibraryColumn")).ActualWidth >= 200 && ((ColumnDefinition)window.FindName("LibraryColumn")).ActualWidth <= 400, "Layout compacto não adaptou os painéis");
             Check(((SolidColorBrush)Application.Current!.Resources["BackgroundBrush"]).Color.ToString() == "#FFF5EFE4", "Paleta clara incorreta");
             vm.ToggleThemeCommand.Execute(null);
             Check(vm.ThemeActionLabel.Contains("Tema claro") && ((SolidColorBrush)Application.Current.Resources["BackgroundBrush"]).Color.ToString() == "#FF111925", "Tema escuro/toggle incorretos");
@@ -536,8 +538,8 @@ static class Program
             vm.SelectedDocument = vm.Documents.Single(x => x.Id == firstId); vm.OpenCommand.Execute(null); PumpUntil(() => vm.Title == "Documento A");
             Check(vm.ElapsedLabel != "00:00", "Troca de documentos perdeu progresso"); vm.PlayCommand.Execute(null); PumpUntil(() => vm.NarratedSegment != null); vm.PlayCommand.Execute(null);
             Check(Math.Abs(vm.Player.Position - firstTime) < .4 && vm.Player.Paused, "Outro documento contaminou o cursor");
-            vm.Search = "Documento B"; Check(vm.Documents.Count == 1, "Busca por título falhou"); vm.Search = "navegar"; Check(vm.Documents.Count == 1, "Busca por conteúdo falhou"); vm.Search = "";
-            vm.Tags = "estudo, teste"; AwaitUI(vm.SaveAsync()); vm.TagFilter = "estudo"; Check(vm.Documents.Count == 1, "Filtro de etiquetas falhou"); vm.TagFilter = "";
+            vm.Search = "Documento B"; PumpUntil(()=>!vm.LibraryBusy && vm.Documents.Count==1); Check(vm.Documents.Count == 1, "Busca por título falhou"); vm.Search = "navegar"; PumpUntil(()=>!vm.LibraryBusy && vm.Documents.Count==1); Check(vm.Documents.Count == 1, "Busca por conteúdo falhou"); vm.Search = "";
+            vm.Tags = "estudo, teste"; AwaitUI(vm.SaveAsync()); vm.TagFilter = "estudo"; PumpUntil(()=>!vm.LibraryBusy && vm.Documents.Count==1); Check(vm.Documents.Count == 1, "Filtro de etiquetas falhou"); vm.TagFilter = "";
             using (var db = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = Path.Combine(root, "seeking-interface", "library.db"), Pooling = false }.ToString()))
             {
                 db.Open(); using var cmd = db.CreateCommand(); cmd.CommandText = "CREATE TRIGGER fail_save BEFORE INSERT ON documents BEGIN SELECT RAISE(ABORT, 'simulated-full'); END;"; cmd.ExecuteNonQuery();

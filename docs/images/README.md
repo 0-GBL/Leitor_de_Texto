@@ -1,17 +1,17 @@
 # Imagens da apresentação
 
-Imagens geradas em 17/11/2026 a partir da distribuição local **Leitor 1.2.1**.
+Imagens geradas em 17/11/2026 a partir da compilação Release local **Leitor 1.3.0**.
 
 ## Procedência
 
-As PNGs capturam o conteúdo cliente das telas WPF reais, instanciadas a partir de `artifacts/Leitor-portatil/Leitor.dll`, sem alterar o código do aplicativo. Um processo separado usou `LEITOR_DATA_DIR` em uma pasta temporária dentro de `.tools/`, criou três documentos fictícios e renderizou as árvores visuais com `RenderTargetBitmap` a 96 DPI. Fundo e margens são os das próprias janelas. Não são fotografias da área de trabalho nem mockups desenhados de uma interface inexistente.
+As PNGs capturam o conteúdo cliente das telas WPF reais, instanciadas a partir de `src/Leitor/bin/Release/net10.0-windows/Leitor.dll`, correspondente ao código da 1.3.0. Um processo separado usou `LEITOR_DATA_DIR` em uma pasta temporária dentro de `.tools/`, criou pastas, subpastas e três documentos fictícios e renderizou as árvores visuais com `RenderTargetBitmap` a 96 DPI. Fundo e margens são os das próprias janelas. Não são fotografias da área de trabalho nem mockups desenhados de uma interface inexistente.
 
 As janelas não solicitaram ativação e ficaram fora da área visível. Não foi aberta a biblioteca pessoal, não houve reprodução de áudio, instalação de runtime ou download de modelo. O gerenciador consultou somente a ficha pública da voz Faber. Nenhum PIN ou dado pessoal aparece. Datas, títulos, etiquetas e progresso pertencem à demonstração; o player está parado.
 
 | Arquivo | Conteúdo |
 | --- | --- |
 | `banner.svg` | Identidade vetorial editorial, baseada na paleta clara e na geometria de livro do aplicativo; não é captura de tela. |
-| `interface-clara.png` | Interface completa no tema de livro, com editor/biblioteca/narração. |
+| `interface-clara.png` | Interface completa no tema de livro, com biblioteca hierárquica e estatísticas do editor. |
 | `leitura-clara.png` | Aba Acompanhar e posição selecionada no tema claro. |
 | `interface-escura.png` | A mesma tela no tema escuro real. |
 | `biblioteca.png` | Conteúdo do painel real de biblioteca, capturado separadamente. |

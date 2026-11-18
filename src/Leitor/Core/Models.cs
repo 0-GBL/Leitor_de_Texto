@@ -42,6 +42,10 @@ public sealed class Document
     public string Title { get; set; } = "Novo texto";
     public string Content { get; set; } = "";
     public string Tags { get; set; } = "";
+    public string? FolderId { get; set; }
+    public DateTime? Created { get; set; }
+    [JsonIgnore] public string Location { get; set; } = "Minha biblioteca";
+    [JsonIgnore] public bool IsSummary { get; set; }
     public DateTime Saved { get; set; } = DateTime.Now;
     public int Position { get; set; }
     public double Offset { get; set; }
@@ -83,9 +87,16 @@ public sealed class Settings : Observable
     public string Transition { get => transition; set => Set(ref transition, value); }
     public string? VoiceId { get => voiceId; set => Set(ref voiceId, value); }
     public bool AppLock { get => appLock; set => Set(ref appLock, value); }
+    public string LibraryView { get; set; } = "Todos os textos";
+    public string LibrarySort { get; set; } = "Modificação · recentes";
+    public string LibraryScope { get; set; } = "Toda a biblioteca";
+    public string? SelectedFolderId { get; set; }
+    public List<string> ExpandedFolderIds { get; set; } = [];
+    public double LibraryWidth { get; set; } = 280;
     public void Normalize()
     {
         static double Range(double n, double min, double max, double fallback) => double.IsFinite(n) ? Math.Clamp(n, min, max) : fallback;
+        LibraryWidth = Range(LibraryWidth,200,520,280); ExpandedFolderIds ??= [];
         FontSize = Range(FontSize, 14, 32, 20); Speed = Range(Speed, .5, 2.5, 1); Volume = Range(Volume, 0, 100, 80); Pitch = Range(Pitch, -25, 25, 0);
         SentencePause = Range(SentencePause, 0, 5, .25); ParagraphPause = Range(ParagraphPause, 0, 10, .65); HeadingPause = Range(HeadingPause, 0, 15, 1);
         if (Mode is not ("Natural" or "Rápida" or "Estudos" or "Personalizada")) Mode = "Natural";

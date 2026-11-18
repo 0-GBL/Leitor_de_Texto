@@ -7,7 +7,7 @@ using Leitor.Services;
 
 namespace Leitor.ViewModels;
 
-public sealed class MainViewModel : Observable, IDisposable
+public sealed partial class MainViewModel : Observable, IDisposable
 {
     private readonly SettingsStore settingsStore;
     private readonly LibraryStore library;
@@ -46,7 +46,7 @@ public sealed class MainViewModel : Observable, IDisposable
     public string[] Modes { get; } = ["Natural", "Rápida", "Estudos", "Personalizada"];
     public string[] Transitions { get; } = ["Imediata", "Ao final da frase", "Ao final do parágrafo"];
     public string Title { get => title; set { if (Set(ref title, value)) MarkDirty(); } }
-    public string Content { get => content; set { if (Set(ref content, value)) { MarkDirty(); if (!loading) { legacySegmentation = false; completed = false; } resumeIndex = 0; resumeOffset = 0; resumeElapsed = null; resumeCharacter = null; savedDurations = null; NarratedSegment = null; processing?.Cancel(); if (!loading) _ = Player.StopAsync(); parts = []; Raise(nameof(Segments)); Raise(nameof(ReadingEmpty)); } } }
+    public string Content { get => content; set { if (Set(ref content, value)) { MarkDirty(); if (!EditorOwnsMetrics) QueueStatistics(value); if (!loading) { legacySegmentation = false; completed = false; } resumeIndex = 0; resumeOffset = 0; resumeElapsed = null; resumeCharacter = null; savedDurations = null; NarratedSegment = null; processing?.Cancel(); if (!loading) _ = Player.StopAsync(); parts = []; Raise(nameof(Segments)); Raise(nameof(ReadingEmpty)); } } }
     public string Tags { get => tags; set { if (Set(ref tags, value)) MarkDirty(); } }
     public string Search { get => search; set { if (Set(ref search, value)) Filter(); } }
     public string TagFilter { get => tagFilter; set { if (Set(ref tagFilter, value)) Filter(); } }
@@ -57,7 +57,7 @@ public sealed class MainViewModel : Observable, IDisposable
     public bool SessionUnlocked => Vault.Unlocked;
     public string PinStateLabel => Vault.Configured ? "PIN ativado neste computador" : "PIN desativado · proteção opcional";
     public bool LibraryEmpty => Documents.Count == 0;
-    public string LibraryCount => $"{Documents.Count} {(Documents.Count == 1 ? "texto" : "textos")}";
+    public string LibraryCount => $"{totalDocuments} {(totalDocuments == 1 ? "texto" : "textos")}";
     public string EmptyLibraryTitle => all.Count == 0 ? "Seu próximo aprendizado" : "Nenhum texto encontrado";
     public string EmptyLibraryDescription => all.Count == 0 ? "Crie ou cole um texto. Ele ficará salvo aqui, no seu computador." : "Tente outro termo ou limpe o filtro de etiquetas.";
     public bool ReadingEmpty => parts.Count == 0;
@@ -68,7 +68,7 @@ public sealed class MainViewModel : Observable, IDisposable
     public string PercentLabel => $"{Progress:0}%";
     public Voice? SelectedVoice { get => voice; set { if (Set(ref voice, value)) { Settings.VoiceId = value?.Id; ApplySettings(); Raise(nameof(PitchSupported)); } } }
     public bool PitchSupported => SelectedVoice?.Engine == "Windows";
-    public Document? SelectedDocument { get => selectedDocument; set => Set(ref selectedDocument, value); }
+    public Document? SelectedDocument { get => selectedDocument; set => Set(ref selectedDocument,value); }
     public Segment? SelectedSegment { get => selectedSegment; set => Set(ref selectedSegment, value); }
     public Segment? NarratedSegment
     {
@@ -116,7 +116,7 @@ public sealed class MainViewModel : Observable, IDisposable
         settingsStore = new(root); Settings = settingsStore.Load();
         Vault = new(root); library = new(root, Vault); Player = new(engine ?? speech);
         Action<Exception> error = e => Status = FailureMessage(e);
-        NewCommand = new(() => Guard(() => ChangeDocumentAsync(async () => { await Player.LoadAsync([]); SetDocument(new()); })));
+        NewCommand = new(() => Guard(() => ChangeDocumentAsync(async () => { await Player.LoadAsync([]); SetDocument(new(){FolderId=LibraryView=="Pastas e subpastas"?SelectedFolder?.Id:null}); })));
         PasteCommand = new(() => { try { if (Clipboard.ContainsText()) { Content = Clipboard.GetText(); SelectedTab = 0; } } catch (Exception e) { error(e); } });
         PlayCommand = new(PlayAsync, error);
         StopCommand = new(async () => { processing?.Cancel(); CaptureProgress(); await Player.StopAsync(); await SaveAsync(); RefreshPlayback(); Status = "Leitura parada; progresso salvo."; }, error);
@@ -137,7 +137,7 @@ public sealed class MainViewModel : Observable, IDisposable
         Player.Changed += () => Dispatch(RefreshPlayback);
         autosave = new(TimeSpan.FromSeconds(2), DispatcherPriority.Background, async (_, _) => { if (dirty || Player.Playing && !previewing) await SaveSafelyAsync(); }, Application.Current.Dispatcher);
         ticker = new(TimeSpan.FromMilliseconds(50), DispatcherPriority.Background, (_, _) => { if (Player.Playing) RefreshPlayback(); }, Application.Current.Dispatcher);
-        autosave.Start(); ticker.Start();
+        InitializeOrganization(); autosave.Start(); ticker.Start();
     }
     private bool previewing;
     private static string FailureMessage(Exception e) => e switch
@@ -156,7 +156,7 @@ public sealed class MainViewModel : Observable, IDisposable
         if (Settings.AppLock && Vault.Configured && !SecurityDialog.Verify(Vault, "Desbloquear o Leitor")) { Application.Current.Shutdown(); return; }
         await Task.WhenAll(ReloadLibraryAsync(), ReloadVoicesAsync());
         var latest = all.FirstOrDefault(x => !x.IsUnavailable && (!x.Protected || Vault.Unlocked));
-        if (latest != null) SetDocument(latest);
+        if (latest != null) { var opened=await Task.Run(()=>library.Get(latest.Id)); if(opened!=null&&!opened.IsLocked&&!opened.IsUnavailable) SetDocument(opened,true); }
     }
     public async Task ReloadVoicesAsync()
     {
@@ -171,7 +171,7 @@ public sealed class MainViewModel : Observable, IDisposable
         Player.SetOptions(new(SelectedVoice, Settings.Speed, Settings.Pitch, Settings.SentencePause, Settings.ParagraphPause, Settings.HeadingPause), Settings.Transition);
         Player.SetVolume(Settings.Volume); SavePreferences();
     }
-    public void SavePreferences() { settingsStore.Save(Settings); ThemeChanged?.Invoke(); Raise(nameof(ThemeActionLabel)); Raise(nameof(ThemeIconName)); }
+    public void SavePreferences() { Raise(nameof(StatisticsLabel)); settingsStore.Save(Settings); ThemeChanged?.Invoke(); Raise(nameof(ThemeActionLabel)); Raise(nameof(ThemeIconName)); }
     public void SetMode()
     {
         switch (Settings.Mode)
@@ -250,47 +250,35 @@ public sealed class MainViewModel : Observable, IDisposable
         if (Player.Index >= parts.Count) completed = true;
         resumeCharacter = Player.Index < parts.Count ? parts[Player.Index].Start : null;
     }
-    private Document Snapshot() => new() { Id = current.Id, Title = string.IsNullOrWhiteSpace(Title) ? "Sem título" : Title.Trim(), Content = Content, Tags = Tags, Protected = IsProtected, Saved = DateTime.Now, Position = resumeIndex, Offset = resumeOffset, ElapsedSeconds = resumeElapsed, CharacterPosition = resumeCharacter, SegmentDurations = savedDurations, SegmentationVersion = legacySegmentation ? 1 : 2, Completed = completed, ProgressPercent = completed ? 100 : Progress };
+    private Document Snapshot() => new() { Id = current.Id, Created=current.Created??current.Saved, FolderId=current.FolderId, Title = string.IsNullOrWhiteSpace(Title) ? "Sem título" : Title.Trim(), Content = Content, Tags = Tags, Protected = IsProtected, Saved = DateTime.Now, Position = resumeIndex, Offset = resumeOffset, ElapsedSeconds = resumeElapsed, CharacterPosition = resumeCharacter, SegmentDurations = savedDurations, SegmentationVersion = legacySegmentation ? 1 : 2, Completed = completed, ProgressPercent = completed ? 100 : Progress };
     public async Task SaveAsync()
     {
-        if (loading || string.IsNullOrWhiteSpace(Content) && !all.Any(x => x.Id == current.Id)) return;
+        if (loading || string.IsNullOrWhiteSpace(Content) && !hasSavedCurrent) return;
         await storageGate.WaitAsync();
         try
         {
             CaptureProgress();
             if (!previewing && parts.Count > 0) savedDurations = Player.KnownDurations;
-            var doc = Snapshot(); long savedRevision = revision;
+            var doc = Snapshot(); long savedRevision = revision; bool edited=dirty,newDocument=!hasSavedCurrent,protectionChanged=current.Protected!=IsProtected;
             await Task.Run(() => library.Save(doc));
-            if (current.Id == doc.Id) { current = doc; if (savedRevision == revision) dirty = false; }
-            int index = all.FindIndex(x => x.Id == doc.Id); if (index >= 0) all[index] = doc; else all.Insert(0, doc);
-            Filter();
+            if (current.Id == doc.Id) { hasSavedCurrent=true; current = doc; if (savedRevision == revision) dirty = false; }
+            if(newDocument||protectionChanged) await RefreshFoldersAsync();
+            if(edited||!UpdateSavedSummary(doc)) await RefreshDocumentsAsync();
         }
         finally { storageGate.Release(); }
     }
     private async Task SaveSafelyAsync() { try { await SaveAsync(); } catch (Exception e) { Status = FailureMessage(e); } }
-    private async Task ReloadLibraryAsync() { all = await Task.Run(library.Load); Filter(); }
+    private async Task ReloadLibraryAsync() { await RefreshFoldersAsync(); await RefreshDocumentsAsync(); }
     private async Task ChangeDocumentAsync(Func<Task> change)
     {
         await documentGate.WaitAsync();
         try { processing?.Cancel(); await Player.StopAsync(); CaptureProgress(); await SaveAsync(); await change(); }
         finally { documentGate.Release(); }
     }
-    private void Filter()
+    private void Filter() => ScheduleLibrarySearch();
+    private void SetDocument(Document document,bool saved=false)
     {
-        string? selected = SelectedDocument?.Id;
-        var filtered = all.Where(x => (string.IsNullOrWhiteSpace(Search) || x.Title.Contains(Search, StringComparison.CurrentCultureIgnoreCase) || x.Content.Contains(Search, StringComparison.CurrentCultureIgnoreCase)) && (string.IsNullOrWhiteSpace(TagFilter) || x.Tags.Split(',', StringSplitOptions.TrimEntries).Any(t => t.Equals(TagFilter.Trim(), StringComparison.CurrentCultureIgnoreCase)))).ToList();
-        for (int i = 0; i < filtered.Count; i++)
-        {
-            if (i < Documents.Count && Documents[i].Id == filtered[i].Id) { if (!ReferenceEquals(Documents[i], filtered[i])) Documents[i] = filtered[i]; }
-            else { var found = Documents.FirstOrDefault(x => x.Id == filtered[i].Id); if (found != null) Documents.Remove(found); Documents.Insert(i, filtered[i]); }
-        }
-        while (Documents.Count > filtered.Count) Documents.RemoveAt(Documents.Count - 1);
-        SelectedDocument = Documents.FirstOrDefault(x => x.Id == selected);
-        Raise(nameof(LibraryEmpty)); Raise(nameof(LibraryCount)); Raise(nameof(EmptyLibraryTitle)); Raise(nameof(EmptyLibraryDescription));
-    }
-    private void SetDocument(Document document)
-    {
-        loading = true; current = document; narratedIndex = -1;
+        loading = true; current = document; hasSavedCurrent=saved; narratedIndex = -1;
         Title = document.Title; Content = document.Content; Tags = document.Tags; IsProtected = document.Protected;
         resumeIndex = document.Position; resumeOffset = document.Offset; resumeElapsed = document.ElapsedSeconds;
         resumeCharacter = document.CharacterPosition; savedDurations = document.SegmentDurations;
@@ -308,9 +296,10 @@ public sealed class MainViewModel : Observable, IDisposable
         if (target.Protected)
         {
             if (!SecurityDialog.Verify(Vault, "Abrir texto protegido")) return;
-            await ReloadLibraryAsync(); target = all.First(x => x.Id == target.Id);
+            await ReloadLibraryAsync(); target = all.FirstOrDefault(x => x.Id == target.Id) ?? target;
         }
-        await Player.LoadAsync([]); SetDocument(target);
+        var opened=await Task.Run(()=>library.Get(target.Id)); if(opened==null||opened.IsLocked||opened.IsUnavailable){Status="Documento indisponível ou protegido; dados preservados.";return;}
+        await Player.LoadAsync([]); SetDocument(opened,true);
         RaiseSecurityState();
     }
     private async Task DeleteAsync()
@@ -358,7 +347,7 @@ public sealed class MainViewModel : Observable, IDisposable
     {
         await Player.StopAsync(); await SaveAsync();
         await storageGate.WaitAsync();
-        try { if (IsProtected) SetDocument(new()); Vault.Lock(); await ReloadLibraryAsync(); RaiseSecurityState(); Status = "Sessão dos textos protegidos bloqueada. Será necessário informar o PIN para abri-los."; }
+        try { if (IsProtected) SetDocument(new()); securityRevision++;libraryWork?.Cancel();libraryRevision++;Documents.Clear();all.Clear();FolderRows.Clear();SelectedDocument=null;search="";tagFilter="";Raise(nameof(Search));Raise(nameof(TagFilter)); Vault.Lock(); await ReloadLibraryAsync(); RaiseSecurityState(); Status = "Sessão dos textos protegidos bloqueada. Será necessário informar o PIN para abri-los."; }
         finally { storageGate.Release(); }
     }
     public async Task PrepareVoiceManagementAsync()
@@ -390,5 +379,5 @@ public sealed class MainViewModel : Observable, IDisposable
         try { await Player.StopAsync(); CaptureProgress(); await SaveAsync(); settingsStore.Save(Settings); closed = true; Dispose(); }
         catch { autosave.Start(); ticker.Start(); throw; }
     }
-    public void Dispose() { closed = true; autosave.Stop(); ticker.Stop(); processing?.Cancel(); Player.Dispose(); speech.Dispose(); Vault.Dispose(); }
+    public void Dispose() { closed = true; statisticsWork?.Cancel(); libraryWork?.Cancel(); autosave.Stop(); ticker.Stop(); processing?.Cancel(); Player.Dispose(); speech.Dispose(); Vault.Dispose(); }
 }

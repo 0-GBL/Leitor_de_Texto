@@ -14,27 +14,8 @@
    </WrapPanel>
   </Grid>
   <Grid Grid.Row="1"><Grid.ColumnDefinitions><ColumnDefinition x:Name="LibraryColumn" Width="246" MinWidth="200"/><ColumnDefinition Width="16"/><ColumnDefinition x:Name="ContentColumn" Width="*" MinWidth="330"/><ColumnDefinition Width="16"/><ColumnDefinition x:Name="NarrationColumn" Width="272"/></Grid.ColumnDefinitions>
-   <Border Style="{StaticResource Card}" Padding="16">
-    <DockPanel>
-     <StackPanel DockPanel.Dock="Top"><Grid Margin="0,0,0,10"><TextBlock Text="Biblioteca" FontSize="19" FontWeight="SemiBold"/><TextBlock Text="{Binding LibraryCount}" HorizontalAlignment="Right" VerticalAlignment="Center" Style="{StaticResource Caption}"/></Grid>
-      <TextBlock Text="Buscar nos seus textos" Style="{StaticResource Caption}"/><TextBox x:Name="SearchBox" Text="{Binding Search, UpdateSourceTrigger=PropertyChanged, Delay=160}" AutomationProperties.Name="Pesquisar por título e conteúdo" ToolTip="Pesquisar título e conteúdo · Ctrl+F"/>
-      <TextBlock Text="Etiqueta" Style="{StaticResource Caption}"/><TextBox Text="{Binding TagFilter, UpdateSourceTrigger=PropertyChanged, Delay=160}" AutomationProperties.Name="Filtrar por etiqueta" ToolTip="Digite uma etiqueta exata ou deixe vazio para ver tudo"/>
-     </StackPanel>
-     <StackPanel DockPanel.Dock="Bottom" Margin="0,14,0,0"><Button Content="Abrir selecionado" Command="{Binding OpenCommand}" ToolTip="Abrir o texto selecionado na biblioteca" Margin="0,0,0,8"/><Button Command="{Binding DeleteCommand}" ToolTip="Excluir o documento selecionado, com confirmação" AutomationProperties.Name="Excluir documento selecionado" Margin="0"><StackPanel Orientation="Horizontal"><p:AppIcon Kind="Trash" Margin="0,0,7,0"/><TextBlock Text="Excluir"/></StackPanel></Button><TextBlock Text="Salvamento automático · local" Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,12,0,0"/></StackPanel>
-     <Grid>
-      <ListBox x:Name="LibraryList" ItemsSource="{Binding Documents}" SelectedItem="{Binding SelectedDocument}" MouseDoubleClick="OpenDocument" AutomationProperties.Name="Textos da biblioteca" VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling">
-       <ListBox.ItemTemplate><DataTemplate><StackPanel>
-        <TextBlock Text="{Binding Title}" FontWeight="SemiBold" TextWrapping="Wrap" FontSize="14"/>
-        <TextBlock Text="{Binding Tags}" Foreground="{DynamicResource AccentBrush}" FontSize="11" TextWrapping="Wrap" Margin="0,5,0,0"/>
-        <TextBlock Text="{Binding DateLabel}" Style="{StaticResource Caption}" FontSize="11" Margin="0,5,0,9" TextWrapping="Wrap"/>
-        <ProgressBar Maximum="100" Value="{Binding ProgressValue, Mode=OneWay}" Height="3" Foreground="{DynamicResource AccentBrush}" Background="{DynamicResource BorderBrush}"/>
-        <StackPanel Margin="0,7,0,0"><TextBlock Text="{Binding ProgressLabel}" FontSize="11" FontWeight="SemiBold"/><TextBlock Text="{Binding ProtectionStatus}" FontSize="10" Foreground="{DynamicResource MutedBrush}" Margin="0,3,0,0"/></StackPanel>
-       </StackPanel></DataTemplate></ListBox.ItemTemplate>
-      </ListBox>
-      <StackPanel Visibility="{Binding LibraryEmpty, Converter={StaticResource BoolVisibility}}" VerticalAlignment="Center" Margin="10"><p:AppIcon Kind="Folder" Width="33" Height="33" Foreground="{DynamicResource MutedBrush}" Margin="0,0,0,14"/><TextBlock Text="{Binding EmptyLibraryTitle}" TextAlignment="Center" FontWeight="SemiBold" TextWrapping="Wrap"/><TextBlock Text="{Binding EmptyLibraryDescription}" TextAlignment="Center" TextWrapping="Wrap" Style="{StaticResource Caption}" Margin="0,8,0,14"/><Button Content="Limpar filtros" Command="{Binding ClearFilterCommand}" ToolTip="Limpar busca e etiqueta"/></StackPanel>
-     </Grid>
-    </DockPanel>
-   </Border>
+   <p:LibraryPanel x:Name="Sidebar"/>
+   <GridSplitter Grid.Column="1" Width="6" HorizontalAlignment="Center" VerticalAlignment="Stretch" ResizeBehavior="PreviousAndNext" ResizeDirection="Columns" DragCompleted="LibraryResized" Focusable="True" ToolTip="Redimensionar biblioteca" AutomationProperties.Name="Largura da biblioteca" Background="{DynamicResource BorderBrush}"/>
    <Border Grid.Column="2" Style="{StaticResource Card}" Padding="24,20">
     <DockPanel>
      <StackPanel DockPanel.Dock="Top"><TextBlock Text="SEU ESPAÇO DE LEITURA" Style="{StaticResource Caption}" FontSize="10" FontWeight="SemiBold" Margin="0,0,0,8"/>
@@ -42,8 +23,8 @@
       <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><TextBox Text="{Binding Tags, UpdateSourceTrigger=PropertyChanged}" ToolTip="Etiquetas separadas por vírgula: estudos, trabalho" AutomationProperties.Name="Etiquetas separadas por vírgula" Padding="10,8" FontSize="12" Margin="0,0,10,14"/><Button Grid.Column="1" Command="{Binding SaveCommand}" ToolTip="Salvar texto · Ctrl+S" AutomationProperties.Name="Salvar texto" MinHeight="36" Padding="11,7" Margin="0,0,0,14"><StackPanel Orientation="Horizontal"><p:AppIcon Kind="Save" Width="15" Height="15" Margin="0,0,7,0"/><TextBlock Text="Salvar" FontSize="12"/></StackPanel></Button></Grid>
      </StackPanel>
      <TabControl SelectedIndex="{Binding SelectedTab}">
-      <TabItem Header="Escrever"><Grid Margin="0,7,0,0" TextElement.FontWeight="Normal">
-       <TextBox x:Name="EditorBox" Text="{Binding Content, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" AcceptsTab="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" FontSize="{Binding Settings.FontSize}" BorderThickness="0" Padding="2,12" Margin="0" Background="Transparent" SpellCheck.IsEnabled="False" AutomationProperties.Name="Texto original para leitura"/>
+      <TabItem Header="Escrever"><Grid Margin="0,7,0,0" TextElement.FontWeight="Normal"><Grid.RowDefinitions><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions><TextBlock Grid.Row="1" Text="{Binding StatisticsLabel}" FontSize="10" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap" Margin="0,8,0,0" ToolTip="Inclui espaços e quebras; linhas lógicas são as separadas no texto, não as quebras visuais. O tempo é estimado." AutomationProperties.LiveSetting="Polite"/>
+       <TextBox x:Name="EditorBox" TextChanged="EditorTextChanged" Text="{Binding Content, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" AcceptsTab="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" FontSize="{Binding Settings.FontSize}" BorderThickness="0" Padding="2,12" Margin="0" Background="Transparent" SpellCheck.IsEnabled="False" AutomationProperties.Name="Texto original para leitura"/>
        <StackPanel Margin="4,20" IsHitTestVisible="False"><StackPanel.Style><Style TargetType="StackPanel"><Setter Property="Visibility" Value="Collapsed"/><Style.Triggers><DataTrigger Binding="{Binding Content}" Value=""><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers></Style></StackPanel.Style><TextBlock Text="Uma ideia, um capítulo,&#10;uma nova leitura." FontSize="25" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap"/><TextBlock Text="Digite ou cole seu texto aqui.&#10;Quando estiver pronto, deixe o Leitor dar voz às palavras." Margin="0,16,0,0" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap" LineHeight="23"/></StackPanel>
       </Grid></TabItem>
       <TabItem Header="Acompanhar"><DockPanel Margin="0,8,0,0" TextElement.FontWeight="Normal">
