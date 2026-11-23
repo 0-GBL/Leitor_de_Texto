@@ -25,6 +25,9 @@
  <Geometry x:Key="IconSpeaker">M3,9 L8,9 L14,4 L14,20 L8,15 L3,15 Z M18,8 Q23,12 18,16 M16,10 Q19,12 16,14</Geometry>
  <Geometry x:Key="IconTrash">M4,6 L20,6 M9,6 L9,3 L15,3 L15,6 M6,6 L7,21 L17,21 L18,6 M10,10 L10,17 M14,10 L14,17</Geometry>
  <Geometry x:Key="IconFolder">M3,5 L10,5 L12,8 L21,8 L21,21 L3,21 Z</Geometry>
+ <Geometry x:Key="IconLibraryFolder">M2,7 Q2,5 4,5 H9 L12,8 H20 Q22,8 22,10 V18 Q22,20 20,20 H4 Q2,20 2,18 Z</Geometry>
+ <Geometry x:Key="IconDocument">M6,3 H14 L19,8 V21 H6 Z M14,3 V8 H19 M9,12 H16 M9,16 H15</Geometry>
+ <Geometry x:Key="IconSidebar">M3,5 H21 V19 H3 Z M9,5 V19</Geometry>
  <Geometry x:Key="IconClose">M6,6 L18,18 M18,6 L6,18</Geometry>
  <Geometry x:Key="IconKey">M11,8 A5,5 0 1 1 1,8 A5,5 0 1 1 11,8 M11,8 L23,8 M18,8 L18,13 M22,8 L22,12</Geometry>
-<Geometry x:Key="IconSubfolder">M3,5 L9,5 L11,8 L21,8 L21,20 L3,20 Z M7,11 L7,15 L15,15 M12,12 L15,15 L12,18</Geometry></ResourceDictionary>
+</ResourceDictionary>

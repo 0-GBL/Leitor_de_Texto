@@ -14,4 +14,4 @@
 - Corrigido erro anterior de fechamento recursivo quando não havia texto a salvar.
 - Instalador, executável e informações de versão atualizados para 1.1.0. Biblioteca, cofre, modelos e configurações permanecem nos diretórios originais.
 
-Exportação e funcionalidades futuras permanecem fora desta versão. Consulte `VALIDACAO.md` para resultados e limites dos testes.
+Exportação e funcionalidades futuras permanecem fora desta versão. Consulte `VALIDACAO-1.1.0.md` para resultados e limites dos testes.

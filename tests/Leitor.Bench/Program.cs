@@ -68,14 +68,20 @@ internal static class Program
             {
                 var watch=Stopwatch.StartNew();
                 if(queryType==null)items=storeType.GetMethod("Load")!.Invoke(store,null)!;
-                else{object query=Activator.CreateInstance(queryType,["","","Todos os textos",null,"Toda a biblioteca","Modificação · recentes",0,100])!;object page=storeType.GetMethod("Query")!.Invoke(store,[query,CancellationToken.None])!;items=page.GetType().GetProperty("Items")!.GetValue(page)!;}
+                else
+                {
+                    var constructor = queryType.GetConstructors().Single(candidate => candidate.GetParameters().All(parameter => parameter.HasDefaultValue));
+                    object query = constructor.Invoke(constructor.GetParameters().Select(parameter => parameter.DefaultValue).ToArray());
+                    object page = storeType.GetMethod("Query")!.Invoke(store,[query,CancellationToken.None])!;
+                    items = page.GetType().GetProperty("Items")!.GetValue(page)!;
+                }
                 times.Add(watch.Elapsed.TotalMilliseconds);
             }
             double allocatedMb=(GC.GetTotalAllocatedBytes(true)-allocated)/3d/1048576;int returned=0;long textCharacters=0;
             foreach(object doc in (System.Collections.IEnumerable)items!){returned++;textCharacters+=((string)doc.GetType().GetProperty("Content")!.GetValue(doc)!).Length;}
             GC.KeepAlive(items);((IDisposable)vault).Dispose();result.Add(new{documents=count,initializationOrMigrationMs=upgradeMs,reopenMs=normalOpenMs,listMedianMs=times.Order().ElementAt(1),listAllocatedMb=allocatedMb,returnedRows=returned,retainedContentCharacters=textCharacters});
         }
-        return new{version,fixture="Documentos fictícios de 2048 caracteres, JSON 1.2.1, sem pastas; carga inicial anterior versus página atual de 100 resumos",rows=result};
+        return new{version,fixture="Documentos fictícios de 2048 caracteres, JSON 1.2.1, sem pastas; primeira página de até 100 resumos quando há catálogo",rows=result};
     }
     private static object ProfileStudy(Assembly assembly, string version, bool soak)
     {

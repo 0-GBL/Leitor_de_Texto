@@ -1,5 +1,16 @@
 # Histórico de versões
 
+## 2.0.0 — 19/11/2026
+
+- Retirada a clonagem experimental e a análise de referência usada pelo protótipo. A distribuição estável usa Piper e as vozes do Windows.
+
+- Refinamento da biblioteca com cartões responsivos, ícones dourados personalizáveis, árvore recolhível e localização no diálogo de criação. Distribuição por versão e validação em `docs/releases/`.
+- Biblioteca em tela própria, com conteúdo do diretório, caminho clicável, voltar/avançar, busca por pastas e documentos e histórico local de textos recentes.
+- Cópia transacional de documentos e árvores de pastas. Menus de contexto e arraste com Ctrl para copiar, além do arraste para mover.
+- Preferências de lista/grade, densidade, tamanho dos ícones e cores de pastas. A leitura tem modo foco com destaque e controles de narração.
+- A atualização a partir da 1.3 mantém o esquema SQLite, o PIN, os documentos e o progresso. A migração de bancos mais antigos continua criando backup antes de gravar.
+- Versões portátil e instalável para Windows x64. [Relatório da versão](docs/releases/2.0.0/RELATORIO-VALIDACAO.md).
+
 ## 1.3.0 — 17/11/2026
 
 - Biblioteca com pastas/subpastas, contagens, expansão, menus de contexto, mover por seletor ou arraste, prevenção de ciclos e exclusão com promoção de conteúdo ou confirmação de remoção total.

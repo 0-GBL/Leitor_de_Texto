@@ -3,7 +3,7 @@ using System.Windows;
 namespace Leitor;
 public partial class App : Application
 {
-    public App() : this(null) { }
+    public App() : this(null) { StartupUri = new Uri("MainWindow.xaml", UriKind.Relative); }
     public App(Action<Exception>? errorReporter)
     {
         DispatcherUnhandledException += (_, e) =>

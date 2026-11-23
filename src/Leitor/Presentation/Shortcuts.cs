@@ -10,13 +10,13 @@ public static class Shortcuts
         new("Gerenciamento de textos", [new("Ctrl + N", "Novo texto"), new("Ctrl + V", "Colar no campo atual; fora da edição, colar no editor"), new("Ctrl + S", "Salvar texto"), new("Ctrl + F", "Pesquisar na biblioteca"), new("Ctrl + Shift + N na biblioteca", "Criar pasta ou subpasta fora dos campos editáveis"), new("F2 na biblioteca", "Renomear documento ou pasta selecionada"), new("Ctrl + Shift + M na biblioteca", "Mover a seleção por uma janela acessível"), new("← / → nas pastas", "Recolher / expandir; ↑ / ↓ percorrem a lista")]),
         new("Reprodução de áudio", [new("Ctrl + Espaço", "Iniciar, pausar ou continuar"), new("Espaço", "Reproduzir fora da edição e de controles que usam Espaço"), new("Esc", "Interromper e preservar o progresso"), new("Ctrl + R", "Reiniciar leitura"), new("Ctrl + ← / →", "Voltar / avançar dez segundos fora da edição")]),
         new("Navegação", [new("Ctrl + ↑ / ↓", "Parágrafo anterior / próximo, fora da edição"), new("Ctrl + Shift + ↑ / ↓", "Título anterior / próximo, fora da edição"), new("Enter", "Ir à frase selecionada na área de leitura"), new("← / → na barra", "Prévia de cinco segundos; soltar confirma"), new("Page Up / Page Down na barra", "Avançar / retroceder trinta segundos"), new("Home / End na barra", "Início / final da leitura"), new("Esc durante o arraste", "Cancelar o destino sem alterar o áudio")]),
-        new("Aparência", [new("Ctrl + T", "Alternar tema sem interromper a leitura")]),
+        new("Aparência", [new("Ctrl + T", "Alternar tema sem interromper a leitura"), new("F11", "Entrar ou sair do modo foco"), new("Ctrl + L", "Voltar à biblioteca"), new("Alt + ← / →", "Voltar / avançar no histórico da biblioteca"), new("Ctrl + Shift + C na biblioteca", "Copiar a seleção para uma pasta")]),
         new("Configurações e ajuda", [new("Ctrl + vírgula", "Abrir configurações"), new("F1", "Abrir esta central"), new("Tab / Shift + Tab", "Navegar pelos controles"), new("Ctrl + Tab", "Sair do editor que aceita tabulação")])];
     public static string? ResolveLibrary(Key key,ModifierKeys modifiers,bool editing)
     {
         if(editing)return null;
-        if(modifiers==(ModifierKeys.Control|ModifierKeys.Shift))return key==Key.N?"new":key==Key.M?"move":null;
-        return key==Key.F2&&modifiers==ModifierKeys.None?"rename":null;
+        if(modifiers==(ModifierKeys.Control|ModifierKeys.Shift))return key switch { Key.N=>"new", Key.M=>"move", Key.C=>"copy", _=>null };
+        return modifiers==ModifierKeys.None ? key switch { Key.F2=>"rename", Key.Delete=>"delete", _=>null } : null;
     }
     public static ShortcutAction? Resolve(Key key, ModifierKeys modifiers, bool editing, bool nativeSpace = false, bool reader = false)
     {

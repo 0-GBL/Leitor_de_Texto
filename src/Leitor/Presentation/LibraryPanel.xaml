@@ -1,24 +1,193 @@
-<UserControl x:Class="Leitor.Presentation.LibraryPanel" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:p="clr-namespace:Leitor.Presentation">
- <Border Style="{StaticResource Card}" Padding="12">
-  <Grid><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
-   <StackPanel><Grid><TextBlock Text="Biblioteca" FontSize="18" FontWeight="SemiBold"/><Button HorizontalAlignment="Right" Command="{Binding NewFolderCommand}" Style="{StaticResource IconButton}" ToolTip="Nova pasta · Ctrl+Shift+N" AutomationProperties.Name="Criar pasta"><p:AppIcon Kind="Folder"/></Button></Grid>
-    <ComboBox ItemsSource="{Binding LibraryViews}" SelectedItem="{Binding LibraryView}" Margin="0,4" Padding="8,6" MinHeight="32" AutomationProperties.Name="Visualização da biblioteca"/>
-    <TextBlock Text="{Binding FolderBreadcrumb}" TextTrimming="CharacterEllipsis" ToolTip="{Binding FolderBreadcrumb}" FontSize="11" Foreground="{DynamicResource MutedBrush}" Margin="0,4"/>
-    <ListBox x:Name="FolderTree" GotKeyboardFocus="LibraryFocus" ItemsSource="{Binding FolderRows}" SelectedItem="{Binding SelectedFolder}" Height="145" Visibility="{Binding ShowFolders, Converter={StaticResource BoolVisibility}}" ToolTip="Contagens incluem subpastas. Textos protegidos só contam na sessão desbloqueada." AutomationProperties.Name="Pastas e subpastas" VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling" ScrollViewer.CanContentScroll="True" ScrollViewer.HorizontalScrollBarVisibility="Disabled" PreviewKeyDown="FolderKey" PreviewMouseRightButtonDown="SelectContext" AllowDrop="True" DragOver="DragOverFolder" Drop="DropFolder" PreviewMouseLeftButtonDown="BeginDrag" MouseMove="DragItem">
-     <ListBox.ItemContainerStyle><Style TargetType="ListBoxItem" BasedOn="{StaticResource {x:Type ListBoxItem}}"><Setter Property="AutomationProperties.Name" Value="{Binding Label}"/><Setter Property="Padding" Value="3,5"/><Setter Property="Margin" Value="0"/></Style></ListBox.ItemContainerStyle>
-     <ListBox.ContextMenu><ContextMenu Opened="FolderMenuOpened"/></ListBox.ContextMenu>
-     <ListBox.ItemTemplate><DataTemplate><StackPanel Orientation="Horizontal" Margin="{Binding Indent}"><Button Content="{Binding Expander}" Click="ExpandFolder" Padding="2" MinWidth="20" MinHeight="24" Margin="0,0,3,0" ToolTip="Expandir ou recolher pasta" AutomationProperties.Name="{Binding ExpansionLabel}" IsEnabled="{Binding HasChildren}"/><p:AppIcon Kind="{Binding Icon}" Width="15" Height="15" Margin="0,0,6,0"/><TextBlock Text="{Binding Label}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" ToolTip="{Binding Label}"/></StackPanel></DataTemplate></ListBox.ItemTemplate>
-    </ListBox><TextBlock Text="Ainda sem pastas · use Nova pasta" FontSize="11" TextWrapping="Wrap" Visibility="{Binding NoFolders, Converter={StaticResource BoolVisibility}}"/>
+<UserControl x:Class="Leitor.Presentation.LibraryPanel"
+ xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+ xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+ xmlns:p="clr-namespace:Leitor.Presentation">
+ <UserControl.Resources>
+  <p:FolderColorConverter x:Key="FolderColor"/><p:LibraryTileWidth x:Key="TileWidth"/>
+  <Style x:Key="LibraryIcon" TargetType="p:AppIcon">
+   <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+   <Style.Triggers>
+    <DataTrigger Binding="{Binding Icon}" Value="LibraryFolder"><Setter Property="Foreground" Value="{DynamicResource FolderBrush}"/></DataTrigger><DataTrigger Binding="{Binding HasColor}" Value="True">
+     <Setter Property="Foreground" Value="{Binding Color, Converter={StaticResource FolderColor}}"/>
+    </DataTrigger>
+   </Style.Triggers>
+  </Style>
+ </UserControl.Resources>
+ <Grid>
+  <Grid.ColumnDefinitions><ColumnDefinition x:Name="LibraryColumn" Width="280" MinWidth="200" MaxWidth="520"/><ColumnDefinition x:Name="SidebarGap" Width="12"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+  <Border x:Name="FolderSidebar" Style="{StaticResource Card}" Padding="10">
+   <DockPanel>
+    <Button DockPanel.Dock="Top" DataContext="{Binding Breadcrumbs[0]}" Click="NavigateCrumb" AllowDrop="True"
+      DragOver="DragOverFolder" Drop="DropCrumb" Style="{StaticResource QuietButton}" AutomationProperties.Name="Raiz da biblioteca"
+      Margin="0,0,0,8">
+     <StackPanel Orientation="Horizontal"><p:AppIcon Kind="Book" Width="19" Height="19" Margin="0,0,8,0"/><TextBlock Text="Biblioteca"/></StackPanel>
+    </Button>
+    <ListBox x:Name="FolderTree" ItemsSource="{Binding FolderRows}" SelectedItem="{Binding SelectedFolder}"
+     AutomationProperties.Name="Árvore de pastas" GotKeyboardFocus="TreeFocus" PreviewKeyDown="FolderKey" PreviewMouseRightButtonDown="SelectContext"
+     PreviewMouseLeftButtonDown="BeginDrag" MouseMove="DragItem" AllowDrop="True" DragOver="DragOverFolder" Drop="DropFolder"
+     VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling"
+     ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+     <ListBox.ContextMenu><ContextMenu Opened="TreeMenuOpened"/></ListBox.ContextMenu>
+     <ListBox.ItemContainerStyle>
+      <Style TargetType="ListBoxItem" BasedOn="{StaticResource {x:Type ListBoxItem}}">
+       <Setter Property="Padding" Value="4,5"/><Setter Property="Margin" Value="0,0,0,2"/>
+       <Setter Property="AutomationProperties.Name" Value="{Binding Label}"/>
+      </Style>
+     </ListBox.ItemContainerStyle>
+     <ListBox.ItemTemplate>
+      <DataTemplate>
+       <DockPanel Margin="{Binding Indent}">
+        <Button Content="{Binding Expander}" Click="ExpandFolder" IsEnabled="{Binding HasChildren}" Style="{StaticResource QuietButton}"
+         AutomationProperties.Name="{Binding ExpansionLabel}" Padding="2" MinWidth="23" MinHeight="25" Margin="0,0,4,0"/>
+        <p:AppIcon Kind="{Binding Icon}" Style="{StaticResource LibraryIcon}" Width="21" Height="21" Margin="0,0,7,0"/>
+        <TextBlock Text="{Binding Label}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" ToolTip="{Binding Label}"/>
+       </DockPanel>
+      </DataTemplate>
+     </ListBox.ItemTemplate>
+    </ListBox>
+   </DockPanel>
+  </Border>
+  <GridSplitter x:Name="SidebarSplitter" Grid.Column="1" Width="6" HorizontalAlignment="Center" VerticalAlignment="Stretch"
+   ResizeBehavior="PreviousAndNext" ResizeDirection="Columns" DragCompleted="LibraryResized" Focusable="True"
+   AutomationProperties.Name="Largura da árvore de pastas" Background="Transparent"/>
+  <Grid Grid.Column="2">
+  <Grid.RowDefinitions>
+   <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/>
+  </Grid.RowDefinitions>
+  <DockPanel Margin="0,0,0,12">
+   <StackPanel DockPanel.Dock="Left" Orientation="Horizontal"><Button x:Name="SidebarToggle" Click="ToggleSidebar" Style="{StaticResource IconButton}" AutomationProperties.Name="Recolher painel de pastas" ToolTip="Recolher painel de pastas"><p:AppIcon Kind="Sidebar"/></Button>
+    <Button Command="{Binding NavigateBackCommand}" Style="{StaticResource IconButton}" AutomationProperties.Name="Voltar" ToolTip="Voltar · Alt+←"><p:AppIcon Kind="Left"/></Button>
+    <Button Command="{Binding NavigateForwardCommand}" Style="{StaticResource IconButton}" AutomationProperties.Name="Avançar" ToolTip="Avançar · Alt+→"><p:AppIcon Kind="Right"/></Button>
    </StackPanel>
-   <StackPanel Grid.Row="1"><TextBox x:Name="SearchBox" Text="{Binding Search,UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Pesquisar título ou conteúdo" ToolTip="Pesquisar · Ctrl+F" Margin="0,8,0,4" Padding="8,6"/>
-    <Expander Header="Filtros e ordenação" Margin="0,4,0,8"><StackPanel><ComboBox ItemsSource="{Binding SearchScopes}" SelectedItem="{Binding LibraryScope}" AutomationProperties.Name="Escopo da pesquisa"/><TextBox Text="{Binding TagFilter,UpdateSourceTrigger=PropertyChanged}" ToolTip="Filtrar por etiqueta exata" AutomationProperties.Name="Etiqueta"/><ComboBox ItemsSource="{Binding LibrarySorts}" SelectedItem="{Binding LibrarySort}" AutomationProperties.Name="Ordenar documentos"/></StackPanel></Expander>
+   <Grid DockPanel.Dock="Right" Width="210" Margin="12,0,0,0">
+    <TextBox x:Name="SearchBox" Margin="0" Padding="10,7"
+     Text="{Binding Search,UpdateSourceTrigger=PropertyChanged}" ToolTip="Pesquisar na biblioteca · Ctrl+F"
+     AutomationProperties.Name="Pesquisar nomes de pastas, títulos ou conteúdo"/>
+    <TextBlock Text="Pesquisar na biblioteca" Margin="12,0,0,0" VerticalAlignment="Center"
+     IsHitTestVisible="False" Foreground="{DynamicResource MutedBrush}">
+     <TextBlock.Style>
+      <Style TargetType="TextBlock">
+       <Setter Property="Visibility" Value="Collapsed"/>
+       <Style.Triggers><DataTrigger Binding="{Binding Search}" Value=""><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers>
+      </Style>
+     </TextBlock.Style>
+    </TextBlock>
+   </Grid>
+   <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
+    <ItemsControl ItemsSource="{Binding Breadcrumbs}">
+     <ItemsControl.ItemsPanel><ItemsPanelTemplate><StackPanel Orientation="Horizontal"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+     <ItemsControl.ItemTemplate>
+      <DataTemplate>
+       <StackPanel Orientation="Horizontal"><TextBlock Text="›" VerticalAlignment="Center" Foreground="{DynamicResource MutedBrush}"><TextBlock.Style><Style TargetType="TextBlock"><Style.Triggers><DataTrigger Binding="{Binding Id}" Value="{x:Null}"><Setter Property="Visibility" Value="Collapsed"/></DataTrigger></Style.Triggers></Style></TextBlock.Style></TextBlock><Button Content="{Binding Name}" Click="NavigateCrumb" AllowDrop="True" DragOver="DragOverFolder"
+        Drop="DropCrumb" Padding="9,6" Margin="0,0,4,0" MaxWidth="235" ToolTip="{Binding Name}"><Button.Style><Style TargetType="Button" BasedOn="{StaticResource QuietButton}"><Style.Triggers><DataTrigger Binding="{Binding Current}" Value="True"><Setter Property="Background" Value="{DynamicResource SelectionBrush}"/><Setter Property="FontWeight" Value="SemiBold"/></DataTrigger></Style.Triggers></Style></Button.Style>
+        <Button.ContentTemplate><DataTemplate><TextBlock Text="{Binding}" TextTrimming="CharacterEllipsis"/></DataTemplate></Button.ContentTemplate>
+       </Button></StackPanel>
+      </DataTemplate>
+     </ItemsControl.ItemTemplate>
+    </ItemsControl>
+   </ScrollViewer>
+  </DockPanel>
+  <TextBlock Grid.Row="1" Text="{Binding DirectoryTitle}" FontSize="26" FontWeight="SemiBold" TextWrapping="Wrap"
+   MaxHeight="92" ToolTip="{Binding DirectoryTitle}" Margin="1,1,0,10"/>
+  <DockPanel Grid.Row="2" Margin="0,0,0,10">
+   <Button DockPanel.Dock="Left" Content="Nova pasta" Command="{Binding NewFolderCommand}" ToolTip="{Binding NewFolderLocation}"/>
+   <Grid DockPanel.Dock="Right" Margin="5,0,0,0"><Button x:Name="OptionsButton" Content="Opções" Click="ToggleOptions" Style="{StaticResource QuietButton}"/><Popup x:Name="OptionsPopup" PlacementTarget="{Binding ElementName=OptionsButton}" Placement="Bottom" StaysOpen="False" PreviewKeyDown="OptionsKey"><Border Style="{StaticResource Card}" Padding="12" Width="255"><ScrollViewer MaxHeight="370" VerticalScrollBarVisibility="Auto">
+    <StackPanel Margin="6,0,0,4">
+     <Expander Header="Filtros e ordenação">
+      <StackPanel Margin="0,6,0,0">
+       <ComboBox ItemsSource="{Binding SearchScopes}" SelectedItem="{Binding LibraryScope}" AutomationProperties.Name="Escopo da pesquisa"/>
+       <TextBox Text="{Binding TagFilter,UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Filtrar por etiqueta" ToolTip="Filtrar por etiqueta exata"/>
+       <ComboBox ItemsSource="{Binding LibrarySorts}" SelectedItem="{Binding LibrarySort}" AutomationProperties.Name="Ordenação dos documentos"/>
+       <Button Command="{Binding ClearFilterCommand}" Content="Limpar filtros"/>
+      </StackPanel>
+     </Expander>
+     <Expander Header="Aparência da biblioteca">
+      <StackPanel Margin="0,6,0,0">
+       <CheckBox Content="Exibir em grade" IsChecked="{Binding LibraryGrid}"/>
+       <ComboBox ItemsSource="{Binding Densities}" SelectedItem="{Binding LibraryDensity}" AutomationProperties.Name="Densidade visual"/>
+       <Slider Minimum="16" Maximum="40" TickFrequency="2" IsSnapToTickEnabled="True"
+        Value="{Binding LibraryIconSize}" AutomationProperties.Name="Tamanho dos ícones" ToolTip="Tamanho dos ícones"/>
+      </StackPanel>
+     </Expander>
+    </StackPanel>
+   </ScrollViewer></Border></Popup></Grid>
+   <ComboBox Width="172" HorizontalAlignment="Left" VerticalAlignment="Top" ItemsSource="{Binding LibraryViews}" SelectedItem="{Binding LibraryView}" Margin="0"
+     AutomationProperties.Name="Exibir na biblioteca"/>
+  </DockPanel>
+  <Border Grid.Row="3" Padding="0">
+   <Grid>
+    <ListBox x:Name="LibraryList" ItemsSource="{Binding Entries}" SelectedItem="{Binding SelectedEntry}"
+     MouseDoubleClick="OpenEntry" GotKeyboardFocus="EntryFocus" PreviewKeyDown="EntryKey" PreviewMouseRightButtonDown="SelectContext"
+     PreviewMouseLeftButtonDown="BeginDrag" MouseMove="DragItem" AllowDrop="True" DragOver="DragOverFolder" Drop="DropFolder"
+     VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling"
+     ScrollViewer.HorizontalScrollBarVisibility="Disabled" AutomationProperties.Name="Pastas e documentos">
+     <ListBox.Style>
+      <Style TargetType="ListBox" BasedOn="{StaticResource {x:Type ListBox}}">
+       <Setter Property="ScrollViewer.CanContentScroll" Value="True"/>
+       <Style.Triggers>
+        <DataTrigger Binding="{Binding LibraryGrid}" Value="True">
+         <Setter Property="ScrollViewer.CanContentScroll" Value="False"/>
+         <Setter Property="ItemsPanel"><Setter.Value><ItemsPanelTemplate><WrapPanel ItemWidth="{Binding ActualWidth, RelativeSource={RelativeSource AncestorType=ListBox}, Converter={StaticResource TileWidth}}"/></ItemsPanelTemplate></Setter.Value></Setter>
+        </DataTrigger>
+       </Style.Triggers>
+      </Style>
+     </ListBox.Style>
+     <ListBox.ContextMenu><ContextMenu Opened="EntryMenuOpened"/></ListBox.ContextMenu>
+     <ListBox.ItemContainerStyle>
+      <Style TargetType="ListBoxItem" BasedOn="{StaticResource {x:Type ListBoxItem}}">
+       <Setter Property="AutomationProperties.Name" Value="{Binding Name}"/>
+       <Setter Property="Padding" Value="{Binding DataContext.EntryPadding, RelativeSource={RelativeSource AncestorType=ListBox}}"/>
+       <Setter Property="Margin" Value="0,0,4,3"/>
+       <Style.Triggers>
+        <DataTrigger Binding="{Binding DataContext.LibraryGrid,RelativeSource={RelativeSource AncestorType=ListBox}}" Value="True">
+                  <Setter Property="Margin" Value="0,0,10,10"/>
+         <Setter Property="Template">
+          <Setter.Value>
+           <ControlTemplate TargetType="ListBoxItem">
+            <Border x:Name="Tile" Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}"
+             BorderThickness="1" CornerRadius="11" Padding="{TemplateBinding Padding}" MinHeight="94">
+             <ContentPresenter/>
+            </Border>
+            <ControlTemplate.Triggers>
+             <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Tile" Property="Background" Value="{DynamicResource HoverBrush}"/></Trigger>
+             <Trigger Property="IsSelected" Value="True"><Setter TargetName="Tile" Property="Background" Value="{DynamicResource SelectionBrush}"/><Setter TargetName="Tile" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/></Trigger>
+             <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="Tile" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/></Trigger>
+            </ControlTemplate.Triggers>
+           </ControlTemplate>
+          </Setter.Value>
+         </Setter>
+        </DataTrigger>
+       </Style.Triggers>
+      </Style>
+     </ListBox.ItemContainerStyle>
+     <ListBox.ItemTemplate>
+      <DataTemplate>
+       <Grid ToolTip="{Binding Tooltip}">
+        <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+        <p:AppIcon Kind="{Binding Icon}" Style="{StaticResource LibraryIcon}" Margin="0,0,12,0"
+          Width="{Binding DataContext.LibraryIconSize,RelativeSource={RelativeSource AncestorType=ListBox}}"
+          Height="{Binding Width, RelativeSource={RelativeSource Self}}"/>
+        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+         <TextBlock Text="{Binding Name}" FontSize="15" LineHeight="20" FontWeight="SemiBold" TextWrapping="Wrap" ToolTip="{Binding Name}"/>
+         <TextBlock Text="{Binding Detail}" FontSize="12" Foreground="{DynamicResource MutedBrush}"/>
+        </StackPanel>
+       </Grid>
+      </DataTemplate>
+     </ListBox.ItemTemplate>
+    </ListBox>
+    <TextBlock Text="Nenhuma pasta ou documento para exibir." Margin="16" HorizontalAlignment="Center" VerticalAlignment="Center"
+     TextWrapping="Wrap" Visibility="{Binding ExplorerEmpty, Converter={StaticResource BoolVisibility}}"/>
+   </Grid>
+  </Border>
+  <DockPanel Grid.Row="4" Margin="0,10,0,0">
+   <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Visibility="{Binding HasMultiplePages, Converter={StaticResource BoolVisibility}}">
+    <Button Content="‹" Command="{Binding PreviousPageCommand}" AutomationProperties.Name="Página anterior" Padding="7,3"/>
+    <TextBlock Text="{Binding PageLabel}" VerticalAlignment="Center" Margin="8,0,12,0"/>
+    <Button Content="›" Command="{Binding NextPageCommand}" AutomationProperties.Name="Próxima página" Padding="7,3"/>
    </StackPanel>
-   <Grid Grid.Row="2"><ListBox x:Name="LibraryList" GotKeyboardFocus="LibraryFocus" ItemsSource="{Binding Documents}" SelectedItem="{Binding SelectedDocument}" MouseDoubleClick="OpenDocument" PreviewMouseRightButtonDown="SelectContext" VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling" ScrollViewer.CanContentScroll="True" ScrollViewer.HorizontalScrollBarVisibility="Disabled" AutomationProperties.Name="Textos da biblioteca" PreviewMouseLeftButtonDown="BeginDrag" MouseMove="DragItem">
-    <ListBox.ContextMenu><ContextMenu Opened="DocumentMenuOpened"/></ListBox.ContextMenu>
-    <ListBox.ItemContainerStyle><Style TargetType="ListBoxItem" BasedOn="{StaticResource {x:Type ListBoxItem}}"><Setter Property="AutomationProperties.Name" Value="{Binding Title}"/><Setter Property="Padding" Value="9"/><Setter Property="Margin" Value="0,0,0,3"/></Style></ListBox.ItemContainerStyle>
-    <ListBox.ItemTemplate><DataTemplate><StackPanel><DockPanel><p:AppIcon Kind="Book" Width="14" Height="14" Margin="0,0,6,0"/><TextBlock Text="{Binding Title}" FontWeight="SemiBold" TextWrapping="Wrap"/></DockPanel><TextBlock Text="{Binding Tags}" FontSize="11" Foreground="{DynamicResource AccentBrush}" Margin="0,4,0,0" TextWrapping="Wrap"/><TextBlock Text="{Binding Location}" FontSize="10" Foreground="{DynamicResource MutedBrush}" TextTrimming="CharacterEllipsis" ToolTip="{Binding Location}"/><TextBlock Text="{Binding DateLabel}" FontSize="10" Foreground="{DynamicResource MutedBrush}" Margin="0,4,0,6"/><ProgressBar Value="{Binding ProgressValue,Mode=OneWay}" Height="3" Maximum="100" Foreground="{DynamicResource AccentBrush}"/><TextBlock Text="{Binding ProgressLabel}" FontSize="10" Margin="0,4,0,0"/><TextBlock Text="{Binding ProtectionStatus}" FontSize="10" Foreground="{DynamicResource MutedBrush}"/></StackPanel></DataTemplate></ListBox.ItemTemplate>
-   </ListBox><StackPanel Visibility="{Binding LibraryEmpty,Converter={StaticResource BoolVisibility}}" VerticalAlignment="Center" Margin="8"><TextBlock Text="Pasta vazia ou nenhum resultado" FontWeight="SemiBold" TextWrapping="Wrap"/><TextBlock Text="Crie um texto, mova documentos ou ajuste os filtros." FontSize="12" TextWrapping="Wrap" Margin="0,8"/><Button Content="Limpar filtros" Command="{Binding ClearFilterCommand}"/></StackPanel></Grid>
-   <StackPanel Grid.Row="3" Margin="0,8,0,0"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><Button Content="‹" Command="{Binding PreviousPageCommand}" ToolTip="Página anterior" Padding="8,4" MinHeight="28"/><TextBlock Grid.Column="1" Text="{Binding PageLabel}" VerticalAlignment="Center" HorizontalAlignment="Center" FontSize="11"/><Button Grid.Column="2" Content="›" Command="{Binding NextPageCommand}" ToolTip="Próxima página" Padding="8,4" MinHeight="28"/></Grid><Button Content="Minha biblioteca · sem pasta" Click="RootDropClick" AllowDrop="True" DragOver="DragOverFolder" Drop="DropRoot" FontSize="10" Padding="5" MinHeight="28" ToolTip="Destino principal para arrastar documentos ou pastas"/><Button Content="Abrir selecionado" Command="{Binding OpenCommand}" Margin="0,4,0,0" Padding="5,7"/><ProgressBar IsIndeterminate="True" Height="2" Visibility="{Binding LibraryBusy,Converter={StaticResource BoolVisibility}}" Margin="0,5,0,0"/></StackPanel>
+   <ProgressBar IsIndeterminate="True" Height="3" VerticalAlignment="Center" Margin="0,0,16,0"
+    Visibility="{Binding LibraryBusy,Converter={StaticResource BoolVisibility}}"/>
+  </DockPanel>
   </Grid>
- </Border>
+ </Grid>
 </UserControl>

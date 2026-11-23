@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>WinExe</OutputType><TargetFramework>net10.0-windows</TargetFramework><UseWPF>true</UseWPF>
-    <AssemblyName>Leitor</AssemblyName><RootNamespace>Leitor</RootNamespace><Version>1.3.0</Version>
+    <AssemblyName>Leitor</AssemblyName><RootNamespace>Leitor</RootNamespace>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>Assets/Leitor.ico</ApplicationIcon>
   </PropertyGroup>
@@ -10,7 +10,7 @@
     <Resource Include="Assets/Leitor.ico"/>
     <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.15"/>
     <PackageReference Include="System.Speech" Version="10.0.0"/>
-    <PackageReference Include="NAudio" Version="2.2.1"/>
+    <PackageReference Include="NAudio.WinMM" Version="2.2.1"/>
     <Content Include="../../runtime/piper_worker.py" Link="runtime/piper_worker.py" CopyToOutputDirectory="PreserveNewest"/>
     <Content Include="../../runtime/check_piper.py" Link="runtime/check_piper.py" CopyToOutputDirectory="PreserveNewest"/>
     <Content Include="../../runtime/piper-requirements.txt" Link="runtime/piper-requirements.txt" CopyToOutputDirectory="PreserveNewest"/>

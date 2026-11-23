@@ -18,7 +18,13 @@ public sealed class AppIcon : UserControl
         path.SetBinding(Shape.StrokeProperty, new Binding(nameof(Foreground)) { Source = this });
         Content = new Viewbox { Child = new Canvas { Width = 24, Height = 24, Children = { path } } }; Update();
     }
-    private void Update() { if (path != null) path.SetResourceReference(IconPath.DataProperty, "Icon" + Kind); }
+    private void Update()
+    {
+        if (path == null) return;
+        path.SetResourceReference(IconPath.DataProperty, "Icon" + Kind);
+        if (Kind == "LibraryFolder") path.SetBinding(Shape.FillProperty, new Binding(nameof(Foreground)) { Source = this });
+        else path.ClearValue(Shape.FillProperty);
+    }
 }
 public sealed class ReadingLineHeight : IValueConverter
 {

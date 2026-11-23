@@ -11,6 +11,71 @@ static partial class Program
 {
     private static void RunLibraryTests(string root)
     {
+        Run("Biblioteca 2.0: navegação direta e documentos recentes respeitam o PIN", () =>
+        {
+            string dir = Path.Combine(root, "explorer");
+            using var vault = new Vault(dir);
+            vault.Create("173829");
+            var store = new LibraryStore(dir, vault);
+            string folder = store.CreateFolder("Curso");
+            string child = store.CreateFolder("Módulo", folder);
+            var rootDoc = new Document { Title = "Raiz", Content = "Origem" };
+            var courseDoc = new Document { Title = "Direto", Content = "Origem", FolderId = folder };
+            var nestedDoc = new Document { Title = "Aninhado", FolderId = child };
+            var secret = new Document { Title = "Segredo", FolderId = child, Protected = true };
+            foreach (var doc in new[] { rootDoc, courseDoc, nestedDoc, secret }) store.Save(doc);
+            foreach (bool unlocked in new[] { true, false })
+            {
+                if (!unlocked) vault.Lock();
+                Check(store.Query(new(FolderId: folder, DirectFolder: true)).Items.Single().Id == courseDoc.Id, "Navegação direta incluiu descendentes");
+                var recent = store.Query(new(RecentIds: [nestedDoc.Id, secret.Id, rootDoc.Id, "excluído", nestedDoc.Id]));
+                Check(recent.Total == 2 && recent.Items.Select(d => d.Id).SequenceEqual([nestedDoc.Id, rootDoc.Id]), "Recentes revelaram protegido ou perderam a ordem");
+                var search = store.Query(new(Search: "origem", PageSize: 1));
+                Check(search.Total == 2 && search.Items.Count == 1, "Total da pesquisa divergiu da paginação");
+            }
+            Check(store.Query(new(DirectFolder: true)).Items.All(d => d.Id == rootDoc.Id || d.IsLocked), "A raiz incluiu pastas filhas");
+        });
+        Run("Biblioteca 2.0: cópia de árvore e de textos mantém progresso, PIN e atomicidade", () =>
+        {
+            string dir = Path.Combine(root, "copies");
+            using var vault = new Vault(dir);
+            vault.Create("173829");
+            var store = new LibraryStore(dir, vault);
+            string parent = store.CreateFolder("Origem"), child = store.CreateFolder("Aula", parent);
+            string target = store.CreateFolder("Destino");
+            var source = new Document { Title = "Aula", Content = "Progresso", FolderId = child, Offset = 2.75, Protected = true };
+            store.Save(source);
+            vault.Lock();
+            try { store.CopyFolder(parent, target); throw new Exception("Cópia aceitou cofre bloqueado"); } catch (InvalidOperationException) { }
+            Check(store.Folders().Count == 3 && store.Load().Count == 1, "Cópia incompleta deixou registros");
+            Check(vault.Unlock("173829"), "Falha no PIN");
+            try { store.CopyFolder(parent, child); throw new Exception("Cópia aceitou descendente"); } catch (InvalidOperationException) { }
+            var copies = store.CopyFolder(parent, target);
+            Check(copies.Count == 2 && store.Folders().Single(f => f.Id == copies[child]).ParentId == copies[parent], "Estrutura da cópia ficou incorreta");
+            var copy = store.Load().Single(d => d.FolderId == copies[child]);
+            Check(copy.Id != source.Id && copy.Protected && copy.Content == source.Content && copy.Offset == 2.75, "Cópia perdeu conteúdo, progresso ou proteção");
+            string second = store.CopyDocument(source.Id, null);
+            Check(store.Get(second)!.FolderId == null && store.Get(source.Id)!.FolderId == child, "Cópia alterou a origem");
+            vault.Lock();
+            Check(store.Get(copy.Id)!.IsLocked && store.Get(second)!.IsLocked, "Cópia protegida ficou disponível com PIN bloqueado");
+        });
+        Run("Biblioteca 2.0: personalização é persistente e configurações antigas continuam legíveis", () =>
+        {
+            string dir = Path.Combine(root, "explorer-settings");
+            var store = new SettingsStore(dir);
+            File.WriteAllText(Path.Combine(dir, "settings.json"), """{"SelectedFolderId":"antiga","Dark":true}""");
+            var settings = store.Load();
+            Check(settings.SelectedFolderId == "antiga" && settings.Dark && settings.LibraryDensity == "Normal", "Preferências antigas incompatíveis");
+            settings.LibraryGrid = true;
+            settings.LibraryDensity = "Ampla";
+            settings.LibraryIconSize = 36;
+            settings.FolderColors["antiga"] = "#3D865F";
+            settings.RecentDocumentIds = ["a", "b", "a"];
+            store.Save(settings);
+            var reloaded = store.Load();
+            Check(reloaded.LibraryGrid && reloaded.LibraryDensity == "Ampla" && reloaded.LibraryIconSize == 36
+                && reloaded.FolderColors["antiga"] == "#3D865F" && reloaded.RecentDocumentIds.SequenceEqual(["a", "b"]), "Preferências novas não persistiram");
+        });
         Run("Biblioteca 1.3: migração com backup, payload intacto e idempotência",()=>
         {
             string dir=Path.Combine(root,"migration");using var vault=new Vault(dir);vault.Create("173829");

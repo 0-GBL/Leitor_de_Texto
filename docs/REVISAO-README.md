@@ -8,8 +8,8 @@ Data: 17/11/2026. Escopo exclusivo de documentação/apresentação da versão 1
 - Atalhos: `Presentation/Shortcuts.cs`, handlers de MainWindow/SettingsWindow/HelpWindow e SeekSlider. A tabela inclui edição nativa e os comandos locais da barra.
 - Segurança: Vault, Storage, AtomicFiles, VoiceDownloads e os relatórios já existentes. Não houve novos testes criptográficos ou alterações de proteção nesta tarefa.
 - 1.1.0: relatório recuperado do commit cbf2ef8 e preservado em VALIDACAO-1.1.0.md, com 19 testes.
-- 1.2.0: VALIDACAO-1.2.0.md, com 25 testes.
-- 1.2.1: VALIDACAO.md e DESEMPENHO-1.2.1.md, com 35 cenários distintos e distinção entre testes locais, rede, sintéticos e físicos.
+- 1.2.0: releases/1.2.0/RELATORIO-VALIDACAO.md, com 25 testes.
+- 1.2.1: releases/1.2.1/RELATORIO-VALIDACAO.md e DESEMPENHO-1.2.1.md, com 35 cenários distintos e distinção entre testes locais, rede, sintéticos e físicos.
 - 1.0.0: 11 testes é o histórico informado pelo autor no pedido; não foi localizado relatório versionado para confirmar independentemente essa execução. Essa procedência está explícita no README.
 - Licença: texto GPL v3 em LICENSE e declaração GPL-3.0-or-later em THIRD-PARTY-NOTICES.md; as licenças das dependências/modelos continuam separadas.
 

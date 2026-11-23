@@ -1,5 +1,15 @@
 # Imagens da apresentação
 
+## Capturas da versão 2.0.0
+
+- `biblioteca-clara-2.0.0.png` mostra os cartões e um nome longo com a janela configurada em 1280 × 800.
+- `biblioteca-escura-2.0.0.png` mostra a grade com a janela configurada em 800 × 640.
+- `modo-foco-escuro-2.0.0.png` mostra a leitura em 800 × 640 durante a reprodução de um WAV de teste com volume zero.
+
+O teste WPF da biblioteca cria pastas e textos fictícios em um perfil temporário e renderiza a área cliente com `RenderTargetBitmap` quando `LEITOR_QA_CAPTURES` aponta para uma pasta de destino. O tamanho dos arquivos PNG corresponde à área cliente da janela. As capturas anteriores documentam a versão 1.3.0.
+
+## Capturas da versão 1.3.0
+
 Imagens geradas em 17/11/2026 a partir da compilação Release local **Leitor 1.3.0**.
 
 ## Procedência

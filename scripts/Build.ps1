@@ -16,23 +16,32 @@ if ($LASTEXITCODE -ne 0) { throw 'Compilação falhou.' }
 & $dotnetExe run --project tests/Leitor.Tests/Leitor.Tests.csproj -c Release
 if ($LASTEXITCODE -ne 0) { throw 'Testes falharam.' }
 if ($Package) {
-    & $dotnetExe publish src/Leitor/Leitor.csproj -c Release -r win-x64 --self-contained true -o artifacts/Leitor-portatil
+    $buildProps = [xml](Get-Content -Raw -LiteralPath Directory.Build.props)
+    $version = $buildProps.Project.PropertyGroup.Version
+    if ($version -notmatch '^\d+\.\d+\.\d+$') { throw 'Versão de distribuição inválida.' }
+    $artifacts = New-Item -ItemType Directory -Force -Path (Join-Path $projectRoot 'artifacts')
+    $target = Join-Path $artifacts.FullName $version
+    $stagingParent = New-Item -ItemType Directory -Force -Path (Join-Path $projectRoot '.tools/release-staging')
+    $staging = New-Item -ItemType Directory -Path (Join-Path $stagingParent.FullName ([guid]::NewGuid().ToString('N')))
+    $delivery = (New-Item -ItemType Directory -Path (Join-Path $staging.FullName 'delivery')).FullName
+    $portable = Join-Path $staging.FullName 'portable'
+    $portableArchive = Join-Path $delivery 'Leitor-portatil.zip'
+    $installer = Join-Path $delivery 'Leitor-Instalador.exe'
+    & $dotnetExe publish src/Leitor/Leitor.csproj -c Release -r win-x64 --self-contained true -o $portable
     if ($LASTEXITCODE -ne 0) { throw 'Publicação falhou.' }
-    Copy-Item -LiteralPath LICENSE -Destination artifacts/Leitor-portatil/LICENSE.txt
-    Copy-Item -LiteralPath THIRD-PARTY-NOTICES.md -Destination artifacts/Leitor-portatil/
-    Copy-Item -LiteralPath README.md -Destination artifacts/Leitor-portatil/
-    Copy-Item -LiteralPath CHANGELOG.md -Destination artifacts/Leitor-portatil/
-    New-Item -ItemType Directory -Force -Path artifacts/Leitor-portatil/docs | Out-Null
-    Copy-Item -Path 'docs/*' -Destination artifacts/Leitor-portatil/docs -Recurse -Force
-    Compress-Archive -Path 'artifacts/Leitor-portatil/*' -DestinationPath artifacts/Leitor-portatil.zip -Force
-    & $dotnetExe publish installer/Leitor.Setup.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o artifacts/Instalador
+    Copy-Item -LiteralPath LICENSE -Destination (Join-Path $portable 'LICENSE.txt')
+    Copy-Item -LiteralPath THIRD-PARTY-NOTICES.md,README.md,CHANGELOG.md -Destination $portable
+    $portableDocs = New-Item -ItemType Directory -Force -Path (Join-Path $portable 'docs')
+    Copy-Item -Path 'docs/*' -Destination $portableDocs.FullName -Recurse -Force
+    Compress-Archive -Path (Join-Path $portable '*') -DestinationPath $portableArchive -Force
+    $setupDirectory = Join-Path $staging.FullName 'installer'
+    & $dotnetExe publish installer/Leitor.Setup.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true "-p:PayloadZip=$portableArchive" -o $setupDirectory
     if ($LASTEXITCODE -ne 0) { throw 'Instalador falhou.' }
-    Copy-Item -LiteralPath artifacts/Instalador/Leitor-Instalador.exe -Destination artifacts/Leitor-Instalador.exe -Force
-    $setupCheck = Start-Process -FilePath (Join-Path $projectRoot 'artifacts\Leitor-Instalador.exe') -ArgumentList '--verify-payload' -WindowStyle Hidden -Wait -PassThru
+    Move-Item -LiteralPath (Join-Path $setupDirectory 'Leitor-Instalador.exe') -Destination $installer
+    $setupCheck = Start-Process -FilePath $installer -ArgumentList '--verify-payload' -WindowStyle Hidden -Wait -PassThru
     if ($setupCheck.ExitCode -ne 0) { throw "Verificação do instalador falhou: $($setupCheck.ExitCode)" }
     Add-Type -AssemblyName System.IO.Compression.FileSystem
-    $sourceArchive = Join-Path $projectRoot 'artifacts\Leitor-codigo-fonte.zip'
-    if (Test-Path -LiteralPath $sourceArchive) { Remove-Item -LiteralPath $sourceArchive }
+    $sourceArchive = Join-Path $delivery 'Leitor-codigo-fonte.zip'
     $sourceZip = [IO.Compression.ZipFile]::Open($sourceArchive, [IO.Compression.ZipArchiveMode]::Create)
     try {
         $sourceFiles = Get-ChildItem -LiteralPath src,tests,installer,runtime,scripts,docs,shared -Recurse -File | Where-Object { $_.FullName -notmatch '\\(bin|obj|__pycache__|piper|voices)\\' -and $_.Name -notmatch '\.(db|onnx|part|pyc)$|^(vault|settings)\.json$|^auth-state\.bin$' }
@@ -42,7 +51,30 @@ if ($Package) {
             [IO.Compression.ZipFileExtensions]::CreateEntryFromFile($sourceZip, $file.FullName, $entryName) | Out-Null
         }
     } finally { $sourceZip.Dispose() }
-    Copy-Item -LiteralPath docs/VALIDACAO.md -Destination artifacts/RELATORIO-VALIDACAO-1.3.0.md -Force
-    Get-FileHash artifacts/Leitor-Instalador.exe,artifacts/Leitor-portatil.zip,artifacts/Leitor-codigo-fonte.zip -Algorithm SHA256 | ForEach-Object { "$($_.Hash)  $([IO.Path]::GetFileName($_.Path))" } | Set-Content -LiteralPath artifacts/SHA256SUMS.txt
-    Get-FileHash artifacts/Leitor-Instalador.exe,artifacts/Leitor-portatil.zip -Algorithm SHA256 | Format-Table -AutoSize
+    $hashes = Get-FileHash $installer,$portableArchive,$sourceArchive -Algorithm SHA256
+    $hashes | ForEach-Object { "$($_.Hash)  $([IO.Path]::GetFileName($_.Path))" } | Set-Content -LiteralPath (Join-Path $delivery 'SHA256SUMS.txt')
+
+    # Keep the previous version directory available for rollback until publication succeeds.
+    $previous = Join-Path $staging.FullName 'previous'
+    if (Test-Path -LiteralPath $target) {
+        $existing = Get-Item -LiteralPath $target
+        if (!$existing.PSIsContainer -or $existing.Attributes -band [IO.FileAttributes]::ReparsePoint -or $existing.Parent.FullName -ne $artifacts.FullName) {
+            throw "Diretório de distribuição inesperado: $target"
+        }
+        Move-Item -LiteralPath $existing.FullName -Destination $previous
+    }
+    try {
+        Move-Item -LiteralPath $delivery -Destination $target
+    } catch {
+        if (Test-Path -LiteralPath $previous) { Move-Item -LiteralPath $previous -Destination $target }
+        throw
+    }
+    foreach ($hash in $hashes) {
+        $file = Join-Path $target ([IO.Path]::GetFileName($hash.Path))
+        if ((Get-FileHash -LiteralPath $file -Algorithm SHA256).Hash -ne $hash.Hash) {
+            throw "Checksum inválido após publicação: $file. Backup em $previous."
+        }
+    }
+    Write-Output "Pacotes conferidos em $target"
+    if (Test-Path -LiteralPath $previous) { Write-Output "Distribuição anterior preservada em $previous" }
 }

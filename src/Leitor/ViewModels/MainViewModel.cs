@@ -17,7 +17,6 @@ public sealed partial class MainViewModel : Observable, IDisposable
     private readonly DispatcherTimer autosave, ticker;
     private readonly SemaphoreSlim storageGate = new(1, 1);
     private readonly SemaphoreSlim documentGate = new(1, 1), preparationGate = new(1, 1);
-    private List<Document> all = [];
     private Document current = new();
     private bool dirty, loading, closed;
     private string title = "Novo texto", content = "", tags = "", search = "", tagFilter = "", status = "Pronto. Cole um texto para começar.";
@@ -40,7 +39,6 @@ public sealed partial class MainViewModel : Observable, IDisposable
     private CancellationTokenSource? processing;
     private Task? initialization;
     public Settings Settings { get; }
-    public ObservableCollection<Document> Documents { get; } = [];
     public ObservableCollection<Voice> Voices { get; } = [];
     public IReadOnlyList<Segment> Segments => parts;
     public string[] Modes { get; } = ["Natural", "Rápida", "Estudos", "Personalizada"];
@@ -56,10 +54,6 @@ public sealed partial class MainViewModel : Observable, IDisposable
     public bool PinConfigured => Vault.Configured;
     public bool SessionUnlocked => Vault.Unlocked;
     public string PinStateLabel => Vault.Configured ? "PIN ativado neste computador" : "PIN desativado · proteção opcional";
-    public bool LibraryEmpty => Documents.Count == 0;
-    public string LibraryCount => $"{totalDocuments} {(totalDocuments == 1 ? "texto" : "textos")}";
-    public string EmptyLibraryTitle => all.Count == 0 ? "Seu próximo aprendizado" : "Nenhum texto encontrado";
-    public string EmptyLibraryDescription => all.Count == 0 ? "Crie ou cole um texto. Ele ficará salvo aqui, no seu computador." : "Tente outro termo ou limpe o filtro de etiquetas.";
     public bool ReadingEmpty => parts.Count == 0;
     public bool IsBuffering => processingText || Player.Preparing;
     public string ReadingState => IsBuffering ? "Preparando áudio" : Player.Paused ? "Leitura pausada" : Player.Playing ? "Em leitura" : completed ? "Leitura concluída" : "Pronto para ler";
@@ -82,8 +76,6 @@ public sealed partial class MainViewModel : Observable, IDisposable
     private double DisplayDuration => parts.Count == 0 || previewing ? Math.Max(DisplayPosition, Content.Length / (14.0 * Settings.Speed)) : Player.Duration;
     public double Progress => DisplayDuration <= 0 ? 0 : Math.Clamp(DisplayPosition / DisplayDuration * 100, 0, 100);
     public double BufferedProgress => Player.Duration <= 0 ? 0 : Player.Buffered / Player.Duration * 100;
-    public string TimeLabel => $"{Format(DisplayPosition)} / ~{Format(DisplayDuration)}  ·  {Progress:0}%";
-    public string ProcessedLabel => $"Áudio preparado: {BufferedProgress:0}% · restante sob demanda";
     private static string Format(double seconds) => TimeSpan.FromSeconds(Math.Max(0, seconds)).ToString(seconds >= 3600 ? @"h\:mm\:ss" : @"mm\:ss");
     public Command NewCommand { get; }
     public Command PasteCommand { get; }
@@ -116,14 +108,15 @@ public sealed partial class MainViewModel : Observable, IDisposable
         settingsStore = new(root); Settings = settingsStore.Load();
         Vault = new(root); library = new(root, Vault); Player = new(engine ?? speech);
         Action<Exception> error = e => Status = FailureMessage(e);
-        NewCommand = new(() => Guard(() => ChangeDocumentAsync(async () => { await Player.LoadAsync([]); SetDocument(new(){FolderId=LibraryView=="Pastas e subpastas"?SelectedFolder?.Id:null}); })));
-        PasteCommand = new(() => { try { if (Clipboard.ContainsText()) { Content = Clipboard.GetText(); SelectedTab = 0; } } catch (Exception e) { error(e); } });
+        NewCommand = new(() => Guard(() => ChangeDocumentAsync(async () => { await Player.LoadAsync([]); SetDocument(new(){FolderId=LibraryView=="Pastas e subpastas"?SelectedFolder?.Id:null}); ShowEditor(); })));
+        PasteCommand = new(() => { try { if (Clipboard.ContainsText()) { Content = Clipboard.GetText(); ShowEditor(); } } catch (Exception e) { error(e); } });
         PlayCommand = new(PlayAsync, error);
         StopCommand = new(async () => { processing?.Cancel(); CaptureProgress(); await Player.StopAsync(); await SaveAsync(); RefreshPlayback(); Status = "Leitura parada; progresso salvo."; }, error);
         RestartCommand = new(RestartReadingAsync, error);
         ToggleThemeCommand = new(() => { Settings.Dark = !Settings.Dark; Raise(nameof(ThemeActionLabel)); SavePreferences(); });
         SaveCommand = new(async () => { await SaveAsync(); Status = "Texto salvo na biblioteca local."; }, error);
-        OpenCommand = new(() => ChangeDocumentAsync(OpenAsync), error); DeleteCommand = new(() => ChangeDocumentAsync(DeleteAsync), error);
+        OpenCommand = new(() => SelectedDocument is {} document ? ChangeDocumentAsync(() => OpenAsync(document)) : Task.CompletedTask, error);
+        DeleteCommand = new(() => SelectedDocument is {} document ? ChangeDocumentAsync(() => DeleteAsync(document)) : Task.CompletedTask, error);
         BackCommand = new(() => Player.SeekAsync(Player.Position - 10), error); ForwardCommand = new(() => Player.SeekAsync(Player.Position + 10), error);
         PreviousParagraphCommand = new(() => Player.NavigateAsync(false, false), error); NextParagraphCommand = new(() => Player.NavigateAsync(true, false), error);
         PreviousTopicCommand = new(() => Player.NavigateAsync(false, true), error); NextTopicCommand = new(() => Player.NavigateAsync(true, true), error);
@@ -155,8 +148,14 @@ public sealed partial class MainViewModel : Observable, IDisposable
     {
         if (Settings.AppLock && Vault.Configured && !SecurityDialog.Verify(Vault, "Desbloquear o Leitor")) { Application.Current.Shutdown(); return; }
         await Task.WhenAll(ReloadLibraryAsync(), ReloadVoicesAsync());
-        var latest = all.FirstOrDefault(x => !x.IsUnavailable && (!x.Protected || Vault.Unlocked));
-        if (latest != null) { var opened=await Task.Run(()=>library.Get(latest.Id)); if(opened!=null&&!opened.IsLocked&&!opened.IsUnavailable) SetDocument(opened,true); }
+        string[] recentIds = Settings.RecentDocumentIds.ToArray();
+        var opened = await Task.Run(() =>
+        {
+            var latest = recentIds.Length == 0 ? null : library.Query(new(RecentIds: recentIds)).Items.FirstOrDefault(x => !x.IsUnavailable);
+            latest ??= library.Query(new()).Items.FirstOrDefault(x => !x.IsUnavailable && !x.IsLocked);
+            return latest == null ? null : library.Get(latest.Id);
+        });
+        if (opened is { IsUnavailable: false, IsLocked: false }) SetDocument(opened, true);
     }
     public async Task ReloadVoicesAsync()
     {
@@ -186,6 +185,7 @@ public sealed partial class MainViewModel : Observable, IDisposable
     {
         if (Player.Playing && !previewing) { Player.TogglePause(); return; }
         if (string.IsNullOrWhiteSpace(Content)) { Status = "Digite ou cole um texto antes de iniciar."; return; }
+        LibraryVisible = false;
         if (completed && parts.Count > 0) { completed = false; resumeIndex = 0; resumeOffset = 0; resumeElapsed = 0; resumeCharacter = null; await Player.RestartFromBeginningAsync(); return; }
         string documentId = current.Id, snapshot = Content;
         await PrepareReadingAsync();
@@ -238,7 +238,7 @@ public sealed partial class MainViewModel : Observable, IDisposable
         }
         if (!previewing && parts.Count > 0 && Player.Index >= parts.Count) { if (!completed) dirty = true; completed = true; resumeIndex = 0; resumeOffset = 0; resumeElapsed = Player.Position; resumeCharacter = null; }
         if (!previewing && Player.Playing) CaptureProgress();
-        Raise(nameof(Progress)); Raise(nameof(BufferedProgress)); Raise(nameof(TimeLabel)); Raise(nameof(ProcessedLabel)); Raise(nameof(PlayLabel));
+        Raise(nameof(Progress)); Raise(nameof(BufferedProgress)); Raise(nameof(PlayLabel));
         Raise(nameof(ElapsedLabel)); Raise(nameof(DurationLabel)); Raise(nameof(PercentLabel)); Raise(nameof(ReadingState)); Raise(nameof(IsBuffering)); Raise(nameof(PlayIconName));
     }
     private void CaptureProgress()
@@ -260,10 +260,17 @@ public sealed partial class MainViewModel : Observable, IDisposable
             CaptureProgress();
             if (!previewing && parts.Count > 0) savedDurations = Player.KnownDurations;
             var doc = Snapshot(); long savedRevision = revision; bool edited=dirty,newDocument=!hasSavedCurrent,protectionChanged=current.Protected!=IsProtected;
+            bool recentChanged = false;
+            if (doc.Protected && Settings.RecentDocumentIds.Remove(doc.Id))
+            {
+                SavePreferences();
+                recentChanged = true;
+            }
             await Task.Run(() => library.Save(doc));
             if (current.Id == doc.Id) { hasSavedCurrent=true; current = doc; if (savedRevision == revision) dirty = false; }
+            if (newDocument && !doc.Protected) { RecordRecentDocument(doc.Id); recentChanged = true; }
             if(newDocument||protectionChanged) await RefreshFoldersAsync();
-            if(edited||!UpdateSavedSummary(doc)) await RefreshDocumentsAsync();
+            if(edited||recentChanged||!UpdateSavedSummary(doc)) await RefreshDocumentsAsync();
         }
         finally { storageGate.Release(); }
     }
@@ -285,30 +292,47 @@ public sealed partial class MainViewModel : Observable, IDisposable
         completed = document.Completed;
         legacySegmentation = document.SegmentationVersion == 1 || document.SegmentationVersion == null && (document.Position > 0 || document.Offset > 0);
         parts = []; Raise(nameof(Segments)); Raise(nameof(ReadingEmpty)); SelectedSegment = null; NarratedSegment = null;
-        loading = false; dirty = false; SelectedTab = 0; Raise(nameof(ReadingEmpty));
+        loading = false; dirty = false; SelectedTab = FocusMode ? 1 : 0;
         Status = document.Position > 0 || document.Offset > 0 ? "Progresso recuperado. Inicie para continuar de onde parou." : "Pronto para ler."; RefreshPlayback();
     }
-    private async Task OpenAsync()
+    public void ShowEditor()
     {
-        var target = SelectedDocument; if (target == null) return;
+        LibraryVisible = false;
+        FocusMode = false;
+        SelectedTab = 0;
+    }
+    private async Task OpenAsync(Document target)
+    {
         if (target.IsUnavailable) { Status = "A integridade deste documento não pôde ser validada. Ele foi preservado sem alterações."; return; }
         previewing = false;
         if (target.Protected)
         {
             if (!SecurityDialog.Verify(Vault, "Abrir texto protegido")) return;
-            await ReloadLibraryAsync(); target = all.FirstOrDefault(x => x.Id == target.Id) ?? target;
+            await ReloadLibraryAsync();
         }
         var opened=await Task.Run(()=>library.Get(target.Id)); if(opened==null||opened.IsLocked||opened.IsUnavailable){Status="Documento indisponível ou protegido; dados preservados.";return;}
         await Player.LoadAsync([]); SetDocument(opened,true);
+        LibraryVisible = false;
+        if (FocusMode) { await PrepareReadingAsync(); SelectedTab = 1; }
+        if (!opened.Protected)
+        {
+            RecordRecentDocument(opened.Id);
+            if (LibraryView == "Recentes") await RefreshDocumentsAsync();
+        }
         RaiseSecurityState();
     }
-    private async Task DeleteAsync()
+    private void RecordRecentDocument(string id)
     {
-        var target = SelectedDocument; if (target == null) return;
+        Settings.RecentDocumentIds.Remove(id);
+        Settings.RecentDocumentIds.Insert(0, id);
+        SavePreferences();
+    }
+    private async Task DeleteAsync(Document target)
+    {
         if (target.Protected && !SecurityDialog.Verify(Vault, "Excluir texto protegido")) return;
         if (MessageBox.Show($"Excluir “{target.Title}” da biblioteca?", "Excluir texto", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
         await Player.StopAsync(); await storageGate.WaitAsync();
-        try { await Task.Run(() => library.Delete(target.Id)); if (current.Id == target.Id) SetDocument(new()); await ReloadLibraryAsync(); } finally { storageGate.Release(); }
+        try { await Task.Run(() => library.Delete(target.Id)); if (current.Id == target.Id) SetDocument(new()); if (Settings.RecentDocumentIds.Remove(target.Id)) SavePreferences(); await ReloadLibraryAsync(); } finally { storageGate.Release(); }
     }
     private async Task ToggleProtectionAsync()
     {
@@ -347,7 +371,7 @@ public sealed partial class MainViewModel : Observable, IDisposable
     {
         await Player.StopAsync(); await SaveAsync();
         await storageGate.WaitAsync();
-        try { if (IsProtected) SetDocument(new()); securityRevision++;libraryWork?.Cancel();libraryRevision++;Documents.Clear();all.Clear();FolderRows.Clear();SelectedDocument=null;search="";tagFilter="";Raise(nameof(Search));Raise(nameof(TagFilter)); Vault.Lock(); await ReloadLibraryAsync(); RaiseSecurityState(); Status = "Sessão dos textos protegidos bloqueada. Será necessário informar o PIN para abri-los."; }
+        try { if (IsProtected) SetDocument(new()); securityRevision++;libraryWork?.Cancel();libraryRevision++;documents.Clear();FolderRows.Clear();SelectedDocument=null;SelectedEntry=null;search="";tagFilter="";Raise(nameof(Search));Raise(nameof(TagFilter)); Vault.Lock(); RefreshEntries(); await ReloadLibraryAsync(); RaiseSecurityState(); Status = "Sessão dos textos protegidos bloqueada. Será necessário informar o PIN para abri-los."; }
         finally { storageGate.Release(); }
     }
     public async Task PrepareVoiceManagementAsync()

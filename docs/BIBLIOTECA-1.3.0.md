@@ -38,4 +38,4 @@ Caracteres são unidades UTF-16, consistentes com os offsets WPF (um emoji pode 
 
 Blocos de 4.096 caracteres permitem reprocessar apenas a região de pequenas edições, agregando seus contadores. Colagens/substituições grandes usam cálculo assíncrono com debounce de 180 ms e versão para descartar resultados antigos. A duração marcada por ≈ considera velocidade e pausas configuradas de frase e parágrafo; é aproximação textual, distinta da duração já medida pelo motor de voz.
 
-Veja [migração](MIGRACAO-1.3.0.md), [validação](VALIDACAO.md) e [desempenho](DESEMPENHO-1.3.0.md).
+Veja [migração](MIGRACAO-1.3.0.md), [validação](releases/1.3.0/RELATORIO-VALIDACAO.md) e [desempenho](DESEMPENHO-1.3.0.md).

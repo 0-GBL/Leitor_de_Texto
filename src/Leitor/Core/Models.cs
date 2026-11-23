@@ -63,7 +63,6 @@ public sealed class Document
     [JsonIgnore] public string ProgressLabel => IsLocked ? "Leitura protegida" : Completed ? "Concluído" : $"{ProgressValue:0}% lido";
     [JsonIgnore] public string ProtectionStatus => IsUnavailable ? "Indisponível · integridade" : Protected ? "Protegido por PIN" : "Texto local";
     [JsonIgnore] public string DateLabel => IsLocked ? "Desbloqueie para ver os detalhes" : $"{Saved:dd MMM yyyy · HH:mm}";
-    public string Description => Protected ? "Protegido por PIN" : $"{Saved:dd/MM/yyyy HH:mm}  ·  {Tags}";
 }
 public sealed record SpeechOptions(Voice? Voice, double Speed, double Pitch, double SentencePause, double ParagraphPause, double HeadingPause);
 public sealed class Settings : Observable
@@ -87,16 +86,26 @@ public sealed class Settings : Observable
     public string Transition { get => transition; set => Set(ref transition, value); }
     public string? VoiceId { get => voiceId; set => Set(ref voiceId, value); }
     public bool AppLock { get => appLock; set => Set(ref appLock, value); }
-    public string LibraryView { get; set; } = "Todos os textos";
+    public string LibraryView { get; set; } = "Pastas e subpastas";
     public string LibrarySort { get; set; } = "Modificação · recentes";
     public string LibraryScope { get; set; } = "Toda a biblioteca";
     public string? SelectedFolderId { get; set; }
     public List<string> ExpandedFolderIds { get; set; } = [];
     public double LibraryWidth { get; set; } = 280;
+    public bool LibraryGrid { get; set; } = true;
+    public bool LibrarySidebarCollapsed { get; set; }
+    public string LibraryDensity { get; set; } = "Normal";
+    public double LibraryIconSize { get; set; } = 30;
+    public Dictionary<string, string> FolderColors { get; set; } = [];
+    public List<string> RecentDocumentIds { get; set; } = [];
     public void Normalize()
     {
         static double Range(double n, double min, double max, double fallback) => double.IsFinite(n) ? Math.Clamp(n, min, max) : fallback;
         LibraryWidth = Range(LibraryWidth,200,520,280); ExpandedFolderIds ??= [];
+        LibraryIconSize = Range(LibraryIconSize, 16, 40, 20);
+        if (LibraryDensity is not ("Compacta" or "Normal" or "Ampla")) LibraryDensity = "Normal";
+        FolderColors ??= [];
+        RecentDocumentIds = (RecentDocumentIds ?? []).Where(id => !string.IsNullOrEmpty(id)).Distinct().Take(30).ToList();
         FontSize = Range(FontSize, 14, 32, 20); Speed = Range(Speed, .5, 2.5, 1); Volume = Range(Volume, 0, 100, 80); Pitch = Range(Pitch, -25, 25, 0);
         SentencePause = Range(SentencePause, 0, 5, .25); ParagraphPause = Range(ParagraphPause, 0, 10, .65); HeadingPause = Range(HeadingPause, 0, 15, 1);
         if (Mode is not ("Natural" or "Rápida" or "Estudos" or "Personalizada")) Mode = "Natural";

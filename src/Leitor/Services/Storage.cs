@@ -24,50 +24,44 @@ public sealed partial class LibraryStore
         Migrate(directory);
     }
     private SqliteConnection Connect() { var db = new SqliteConnection(connectionString); db.Open(); using var c = db.CreateCommand(); c.CommandText = "PRAGMA foreign_keys=ON; PRAGMA secure_delete=ON; PRAGMA busy_timeout=5000;"; c.ExecuteNonQuery(); return db; }
-    public void Save(Document document) => SaveCore(document, true);
-    private void SaveCore(Document document, bool preserveAssignment)
+    public void Save(Document document)
     {
-        if (document.IsUnavailable || document.IsSummary || document.IsLocked) throw new InvalidOperationException("Abra o documento antes de editar.");
         using var db = Connect(); using var tx = db.BeginTransaction();
-        if (preserveAssignment)
+        var previous = ReadDocument(db, tx, document.Id, assignmentOnly: true);
+        if (previous != null)
         {
-            using var old = db.CreateCommand(); old.Transaction = tx; old.CommandText = "SELECT protected,payload FROM documents WHERE id=$id"; old.Parameters.AddWithValue("$id", document.Id);
-            using var reader = old.ExecuteReader();
-            if(reader.Read())
-            {
-                if(reader.GetBoolean(0)) { var previous = Decode(document.Id, true, (byte[])reader[1]); if(previous.IsUnavailable || previous.IsLocked) throw new InvalidOperationException("Desbloqueie um documento íntegro antes de gravar; original preservado."); document.FolderId = previous.FolderId; document.Created ??= previous.Created ?? previous.Saved; }
-                else { using var c=db.CreateCommand(); c.Transaction=tx; c.CommandText="SELECT folder,created FROM document_catalog WHERE id=$id"; c.Parameters.AddWithValue("$id",document.Id); using var r=c.ExecuteReader(); if(r.Read()){ document.FolderId=r.IsDBNull(0)?null:r.GetString(0); document.Created ??= CatalogDate(r.GetString(1)); } }
-            }
+            RequireReadable(previous);
+            document.FolderId = previous.FolderId;
+            document.Created ??= previous.Created ?? previous.Saved;
         }
+        WriteDocument(db, tx, document);
+        tx.Commit();
+    }
+    private void WriteDocument(SqliteConnection db, SqliteTransaction tx, Document document)
+    {
+        RequireReadable(document);
         document.Created ??= document.Saved;
         byte[] data = JsonSerializer.SerializeToUtf8Bytes(document);
         if (document.Protected) { var plain = data; try { data = vault.Seal(plain, document.Id); } finally { CryptographicOperations.ZeroMemory(plain); } }
         using var cmd = db.CreateCommand(); cmd.Transaction=tx;
         cmd.CommandText="INSERT INTO documents(id,protected,payload) VALUES($id,$p,$v) ON CONFLICT(id) DO UPDATE SET protected=$p,payload=$v";
         cmd.Parameters.AddWithValue("$id",document.Id); cmd.Parameters.AddWithValue("$p",document.Protected?1:0); cmd.Parameters.AddWithValue("$v",data); cmd.ExecuteNonQuery();
-        Catalog(db,tx,document); tx.Commit();
+        Catalog(db,tx,document);
     }
     public List<Document> Load()
     {
-        var result = new List<Document>(); using var db = Connect(); using var cmd = db.CreateCommand(); cmd.CommandText = "SELECT id,protected,payload FROM documents";
+        var result = new List<Document>(); using var db = Connect(); using var cmd = db.CreateCommand();
+        cmd.CommandText = "SELECT d.id,d.protected,CASE WHEN d.protected=0 OR $unlocked THEN d.payload END,c.folder FROM documents d LEFT JOIN document_catalog c USING(id)";
+        cmd.Parameters.AddWithValue("$unlocked",vault.Unlocked);
         using var rows = cmd.ExecuteReader();
         while (rows.Read())
         {
             bool secure = rows.GetBoolean(1);
             if (secure && !vault.Unlocked) { result.Add(new() { Id = rows.GetString(0), Title = "Texto protegido", Protected = true, IsLocked = true }); continue; }
-            byte[] bytes = (byte[])rows[2]; byte[]? plain = null;
-            try
-            {
-                if (!secure && bytes.AsSpan().StartsWith("LVR2"u8)) throw new CryptographicException("Metadados alterados.");
-                plain = secure ? vault.Open(bytes, rows.GetString(0)) : bytes;
-                var doc = JsonSerializer.Deserialize<Document>(plain) ?? throw new JsonException();
-                if (doc.Id != rows.GetString(0) || doc.Protected != secure) throw new CryptographicException("Identidade inválida.");
-                if (!secure) doc.FolderId = FolderOf(doc.Id);
-                result.Add(doc);
-            }
-            catch (Exception error) when (error is CryptographicException or JsonException or FormatException)
-            { result.Add(new() { Id = rows.GetString(0), Title = "Documento indisponível", Protected = secure, IsUnavailable = true }); }
-            finally { if (secure && plain != null) CryptographicOperations.ZeroMemory(plain); }
+            var doc = rows.IsDBNull(2) ? new Document { Id = rows.GetString(0), Title = "Texto protegido", Protected = true, IsLocked = true }
+                : Decode(rows.GetString(0), secure, (byte[])rows[2]);
+            if (!secure) doc.FolderId = rows.IsDBNull(3) ? null : rows.GetString(3);
+            result.Add(doc);
         }
         return result.OrderByDescending(x => x.Saved).ToList();
     }

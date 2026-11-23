@@ -6,7 +6,7 @@ Data: 17/11/2026. Windows x64, .NET 10.0.404, Release. Todos os documentos e ban
 
 **47 cenários distintos aprovados, zero reprovados na execução completa com downloads:** os 35 cenários da 1.2.1 e 12 novos. A suíte local exclui apenas o cenário opt-in de download real e contém 46. O download e a síntese real das vozes PT-BR Faber e Edresson foram exercitados; instalação e vozes locais continuam disponíveis. Execuções finais de empacotamento repetem a suíte local. Contagem de cenários não é percentual de cobertura; cada cenário agrupa várias assertivas.
 
-O relatório anterior foi preservado em [VALIDACAO-1.2.1.md](VALIDACAO-1.2.1.md), além dos relatórios 1.1.0 e 1.2.0. O código de validação está em `tests/Leitor.Tests/Program.cs`, `Program.Library.cs` e `Program.LibraryUI.cs`.
+O relatório anterior foi preservado em [VALIDACAO-1.2.1.md](../1.2.1/RELATORIO-VALIDACAO.md), além dos relatórios 1.1.0 e 1.2.0. O código de validação está em `tests/Leitor.Tests/Program.cs`, `Program.Library.cs` e `Program.LibraryUI.cs`.
 
 | Novos cenários | Verificações |
 | --- | --- |
@@ -27,17 +27,17 @@ Os 35 cenários preservados cobrem segmentação/pontuação, Unicode/offsets, t
 
 ## Build, apresentação e distribuição
 
-A versão dos projetos, manifesto e instalador é 1.3.0. A compilação Release foi concluída sem erros ou avisos após restauração das dependências. A captura usa árvores WPF reais da compilação 1.3.0, fora da área visível e sem ativação; textos, pastas e progresso são fictícios. [Procedência](images/README.md).
+A versão dos projetos, manifesto e instalador é 1.3.0. A compilação Release foi concluída sem erros ou avisos após restauração das dependências. A captura usa árvores WPF reais da compilação 1.3.0, fora da área visível e sem ativação; textos, pastas e progresso são fictícios. [Procedência](../../images/README.md).
 
 `scripts/Build.ps1 -Package` compila, executa a suíte local, publica portátil autossuficiente Windows x64, incorpora o ZIP no instalador e executa `--verify-payload`. O pacote de código inclui fontes/testes/documentação e exclui dados, chaves, bin/obj e modelos. A documentação, inclusive imagens, acompanha a distribuição. `SHA256SUMS.txt` registra os hashes do instalador, portátil e fonte. As conferências finais de entrega incluem conteúdo dos ZIPs, versão e build do fonte extraído; uma falha nessas etapas impede a entrega como validada.
 
 ## Migração e proteção
 
-Os ensaios confirmaram cópia consistente antes da mudança e preservação dos bytes dos documentos antigos/cofre. O esquema acrescenta pastas e catálogo em transação; não troca algoritmos de proteção. Novos documentos continuam com PIN desligado por padrão. Pastas têm nomes/hierarquia em texto simples; associação e metadados de documentos protegidos ficam cifrados. Contagens bloqueadas omitem protegidos. Não houve migração da biblioteca real. [Procedimento e downgrade](MIGRACAO-1.3.0.md) · [Arquitetura](BIBLIOTECA-1.3.0.md).
+Os ensaios confirmaram cópia consistente antes da mudança e preservação dos bytes dos documentos antigos/cofre. O esquema acrescenta pastas e catálogo em transação; não troca algoritmos de proteção. Novos documentos continuam com PIN desligado por padrão. Pastas têm nomes/hierarquia em texto simples; associação e metadados de documentos protegidos ficam cifrados. Contagens bloqueadas omitem protegidos. Não houve migração da biblioteca real. [Procedimento e downgrade](../../MIGRACAO-1.3.0.md) · [Arquitetura](../../BIBLIOTECA-1.3.0.md).
 
 ## Desempenho observado
 
-Na comparação de 10 mil documentos sintéticos de 2.048 caracteres, a carga antiga de todos os corpos levou 167,55 ms e alocou 64,222 MB; uma página nova de 100 resumos levou 5,87 ms e alocou 0,064 MB, sem corpos retidos. As operações devolvem quantidades diferentes por projeto. A primeira migração nessa amostra custou 1,28 s. Na suíte de escala, a busca de 10 mil levou cerca de 0,72 s em segundo plano; não há índice persistente de conteúdo protegido. Working set de 150–176 MB na suíte é do processo de testes, não um pico isolado da GUI/Python. [Método, tabelas e limites](DESEMPENHO-1.3.0.md).
+Na comparação de 10 mil documentos sintéticos de 2.048 caracteres, a carga antiga de todos os corpos levou 167,55 ms e alocou 64,222 MB; uma página nova de 100 resumos levou 5,87 ms e alocou 0,064 MB, sem corpos retidos. As operações devolvem quantidades diferentes por projeto. A primeira migração nessa amostra custou 1,28 s. Na suíte de escala, a busca de 10 mil levou cerca de 0,72 s em segundo plano; não há índice persistente de conteúdo protegido. Working set de 150–176 MB na suíte é do processo de testes, não um pico isolado da GUI/Python. [Método, tabelas e limites](../../DESEMPENHO-1.3.0.md).
 
 ## Limitações e testes pendentes
 
@@ -49,3 +49,13 @@ Na comparação de 10 mil documentos sintéticos de 2.048 caracteres, a carga an
 - Instalador sem assinatura Authenticode. PIN não tem recuperação e DPAPI depende do perfil Windows. Não há downgrade automático.
 
 Esses limites não são apresentados como testes aprovados. A documentação histórica e os formatos de voz existentes foram preservados. Funcionalidades futuras de IA/importação/exportação/web/mobile/sincronização continuam fora desta versão.
+
+## Conferência efetiva dos arquivos entregues
+
+- Suíte completa com downloads reais: 47 aprovados, zero reprovados; suíte local final após revisão de persistência: 46 aprovados, zero reprovados. Após a quebra de linha na ajuda, os três cenários WPF foram repetidos e passaram.
+- Compilação Release e compilação do fonte extraído do ZIP com RestoreLockedMode e win-x64: sucesso, zero avisos e zero erros.
+- Payload do instalador validado com --verify-payload, retorno 0. Nenhuma instalação na conta real foi feita.
+- Os três SHA-256 conferem. Portátil contém 512 entradas; fonte contém 96. Os arquivos do ZIP de fonte correspondem byte a byte ao workspace; tabelas, imagens e novos componentes estão incluídos. Nenhum banco de usuário, cofre, configurações pessoais ou modelo ONNX foi incluído.
+- Distribuição portátil abriu e fechou em pasta fictícia vazia, com janela sem ativação e fora da área visível: pronta em 1.718,95 ms; working set do processo de ensaio 149,18 MB; CPU ociosa 78,13 ms em 2 s. Não inclui Python nem representa pico de memória. Sem reprodução ou acesso à biblioteca real.
+- README: 69 links locais válidos, diagrama Mermaid renderizado e imagens carregadas. O LinkedIn retornou HTTP 999 no verificador automático; não foi alterado. Os demais endereços consultados retornaram 200.
+- git diff --check sem problemas de whitespace. Não foram realizados commits ou envios ao GitHub.

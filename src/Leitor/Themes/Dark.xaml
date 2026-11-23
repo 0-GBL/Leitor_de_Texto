@@ -5,6 +5,7 @@
  <SolidColorBrush x:Key="MutedBrush" Color="#B7C7DE"/>
  <SolidColorBrush x:Key="BorderBrush" Color="#3D4E65"/>
  <SolidColorBrush x:Key="AccentBrush" Color="#396DD6"/>
+ <SolidColorBrush x:Key="FolderBrush" Color="#E4AF52"/>
  <SolidColorBrush x:Key="HighlightBrush" Color="#2C466D"/>
  <SolidColorBrush x:Key="BufferedBrush" Color="#A8BFE8"/>
  <SolidColorBrush x:Key="InputTextBrush" Color="#EDF3FC"/>

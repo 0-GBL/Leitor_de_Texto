@@ -2,7 +2,6 @@ using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
-using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
 using Leitor.ViewModels;
@@ -27,15 +26,11 @@ public partial class MainWindow : Window
     private async void OnLoaded(object sender, RoutedEventArgs e) { if (vm == null) return; ApplyTheme(); await vm.InitializeAsync(); ready = true; }
     private void AdaptiveLayout(object sender, SizeChangedEventArgs e)
     {
-        if (LibraryColumn == null) return;
-        bool compact = ActualWidth < 1100;
-        NarrationColumn.Width = new GridLength(compact ? 232 : 272); ContentColumn.MinWidth = compact ? 240 : 330;
-        LibraryColumn.MaxWidth=Math.Max(200,Math.Min(520,ActualWidth-NarrationColumn.Width.Value-ContentColumn.MinWidth-80));
-        double desired=vm?.Settings.LibraryWidth??280;LibraryColumn.Width=new GridLength(Math.Clamp(double.IsFinite(desired)?desired:280,200,LibraryColumn.MaxWidth));
+        if (Sidebar == null) return;
+        NarrationColumn.Width = new GridLength(ActualWidth < 1000 ? 228 : 272);
+        Sidebar.AdaptWidth(ActualWidth - 44);
     }
     public TextBox SearchBox=>Sidebar.SearchInput;
-    public new object FindName(string name)=>(name=="SearchBox"?SearchBox:name=="LibraryList"?Sidebar.FindName(name):base.FindName(name))!;
-    private void LibraryResized(object sender,System.Windows.Controls.Primitives.DragCompletedEventArgs e){if(vm==null)return;vm.Settings.LibraryWidth=LibraryColumn.ActualWidth;vm.SavePreferences();}
     private void EditorTextChanged(object sender,TextChangedEventArgs e){if(vm!=null)vm.ApplyEditorStatistics(EditorBox.Text,e.Changes);}
     private void ApplyTheme()
     {
@@ -53,7 +48,6 @@ public partial class MainWindow : Window
     private void OpenHelp(object sender, RoutedEventArgs e) => new HelpWindow { Owner = this, ShowActivated = IsActive }.ShowDialog();
     private async void ManageVoices(object sender, RoutedEventArgs e)
     { if (vm == null) return; try { await vm.PrepareVoiceManagementAsync(); new VoiceManager { Owner = this }.ShowDialog(); await vm.ReloadVoicesAsync(); } catch (Exception error) { vm.Status = "Não foi possível abrir os recursos de voz: " + error.Message; } }
-    private void OpenDocument(object sender, MouseButtonEventArgs e) => vm?.OpenCommand.Execute(null);
     private void JumpToSegment(object sender, MouseButtonEventArgs e) => vm?.JumpCommand.Execute(null);
     private double seekDuration;
     private void SeekStarted(object? sender, EventArgs e)
@@ -93,9 +87,29 @@ public partial class MainWindow : Window
     {
         if (vm == null || e.Handled || e.IsRepeat) return;
         var focus = Keyboard.FocusedElement as DependencyObject;
+        var modifiers = Keyboard.Modifiers;
+        var key = e.Key == Key.System ? e.SystemKey : e.Key;
+        ICommand? navigation = (key, modifiers) switch
+        {
+            (Key.L, ModifierKeys.Control) => vm.ShowLibraryCommand,
+            (Key.F11, ModifierKeys.None) => vm.ToggleFocusCommand,
+            (Key.Left, ModifierKeys.Alt) when vm.LibraryVisible => vm.NavigateBackCommand,
+            (Key.Right, ModifierKeys.Alt) when vm.LibraryVisible => vm.NavigateForwardCommand,
+            _ => null
+        };
+        if (navigation != null)
+        {
+            if (navigation.CanExecute(null)) navigation.Execute(null);
+            e.Handled = true;
+            return;
+        }
         if(Sidebar.IsKeyboardFocusWithin&&!IsEditing(focus))
         {
-            ICommand? organization=Shortcuts.ResolveLibrary(e.Key,Keyboard.Modifiers,false) switch{"new"=>vm.NewFolderCommand,"move"=>vm.MoveItemCommand,"rename"=>vm.RenameItemCommand,_=>null};
+            ICommand? organization=Shortcuts.ResolveLibrary(key,modifiers,false) switch
+            {
+                "new"=>vm.NewFolderCommand, "move"=>vm.MoveItemCommand, "copy"=>vm.CopyItemCommand,
+                "rename"=>vm.RenameItemCommand, "delete"=>vm.FolderContext ? vm.DeleteFolderCommand : vm.DeleteCommand, _=>null
+            };
             if(organization!=null){e.Handled=true;if(organization.CanExecute(null))organization.Execute(null);return;}
         }
         if (focus == Timeline && Timeline.IsInteracting && e.Key == Key.Escape) { Timeline.CancelInteraction(); e.Handled = true; return; }
@@ -116,8 +130,8 @@ public partial class MainWindow : Window
         if (command != null) { if (command.CanExecute(null)) command.Execute(null); return; }
         switch (action)
         {
-            case ShortcutAction.Paste: vm.SelectedTab = 0; EditorBox.Focus(); EditorBox.Paste(); break;
-            case ShortcutAction.Search: SearchBox.Focus(); SearchBox.SelectAll(); break;
+            case ShortcutAction.Paste: vm.ShowEditor(); UpdateLayout(); EditorBox.Focus(); EditorBox.Paste(); break;
+            case ShortcutAction.Search: vm.ShowLibraryCommand.Execute(null); UpdateLayout(); SearchBox.Focus(); SearchBox.SelectAll(); break;
             case ShortcutAction.Settings: OpenSettings(this, new()); break;
             case ShortcutAction.Help: OpenHelp(this, new()); break;
         }

@@ -1,9 +1,9 @@
 [← Voltar à apresentação do projeto](../README.md)
 
-Atualizado para **1.3.0**. A organização por pastas, os novos atalhos, as estatísticas e a privacidade do catálogo estão no [guia da biblioteca](BIBLIOTECA-1.3.0.md). Antes de atualizar ou voltar de versão, leia [migração e backup](MIGRACAO-1.3.0.md). Os procedimentos de voz e reprodução abaixo permanecem aplicáveis.
+Atualizado para **2.0.0**. Para compatibilidade com formatos mais antigos e restauração, consulte [migração e backup](MIGRACAO-1.3.0.md).
 
 
-# Guia do usuário e desenvolvimento — Leitor 1.3.0
+# Guia do usuário e desenvolvimento — Leitor 2.0.0
 
 Os comandos deste guia são executados na raiz do repositório. Para a apresentação do projeto e as imagens atuais, consulte o [README](../README.md).
 
@@ -13,13 +13,23 @@ Construído em C#, .NET 10 LTS, WPF e MVVM, com SQLite, NAudio, System.Speech e 
 
 ## Instalação e uso
 
-1. Execute `artifacts/Leitor-Instalador.exe` (instalação por usuário) ou extraia `artifacts/Leitor-portatil.zip` e abra `Leitor.exe`.
+1. Execute `artifacts/2.0.0/Leitor-Instalador.exe` (instalação por usuário) ou extraia `artifacts/2.0.0/Leitor-portatil.zip` e abra `Leitor.exe`.
 2. Use **Novo texto**, digite ou cole conteúdo e informe título e etiquetas separadas por vírgula. O salvamento é automático; Ctrl+S salva imediatamente.
 3. Inicie a leitura e acompanhe a frase narrada na aba **Acompanhar**. A seleção manual não desloca o destaque; Enter vai até a frase selecionada.
 4. Use pausar/continuar, **Reiniciar leitura**, ±10 segundos e os grupos separados de parágrafos e títulos.
-5. Na biblioteca, pesquise título/conteúdo, filtre uma etiqueta exata e abra o texto selecionado. Os itens mostram data, progresso, proteção e conclusão. Textos protegidos bloqueados não expõem seus títulos ou etiquetas.
+5. Na biblioteca, abra o texto para carregar sua posição. Passe o ponteiro pelo item para consultar data, etiquetas e localização. O ícone de escudo identifica documentos protegidos.
 
-O pacote é autossuficiente: não exige SDK nem instalação manual de .NET/SQLite. `Iniciar.cmd` abre a versão publicada na pasta do projeto. Portátil e instalada usam a mesma biblioteca em `%LOCALAPPDATA%\Leitor`, e não junto ao executável. Feche o aplicativo antes de atualizar. Desinstalar preserva biblioteca, cofre e vozes. Nenhum instalador tem assinatura Authenticode; o Windows pode apresentar avisos de editor desconhecido.
+O pacote é autossuficiente e inclui .NET e SQLite. Para usar pelo código-fonte, rode o build e abra com `Iniciar.cmd`. Portátil e instalada usam a mesma biblioteca em `%LOCALAPPDATA%\Leitor`, e não junto ao executável. Feche o aplicativo antes de atualizar. Desinstalar preserva biblioteca, cofre e vozes. Nenhum instalador tem assinatura Authenticode; o Windows pode apresentar avisos de editor desconhecido.
+
+## Biblioteca e modo foco
+
+- **Navegar.** Escolha **Pastas e subpastas**. Abra pastas com clique duplo ou Enter, use a árvore lateral ou clique em uma etapa do caminho. O primeiro botão da barra recolhe ou expande a árvore e a raiz fica no topo do painel. Alt+← e Alt+→ percorrem os diretórios visitados na sessão. A pasta e a visualização selecionadas são lembradas entre sessões.
+- **Organizar.** Use **Nova pasta** no diretório atual ou abra o menu de contexto de uma pasta para criar uma subpasta. O menu permite abrir, renomear, mover, copiar e excluir. Arraste pastas ou documentos para outra pasta ou para o caminho clicável. Segure Ctrl durante o arraste para copiar. Uma cópia recebe identidade própria e herda o progresso e a proteção da origem.
+- **Pesquisar e retomar.** Ctrl+F pesquisa nomes de pastas e títulos ou conteúdo de documentos. **Filtros e ordenação** reúne etiqueta, escopo e ordem. Em **Recentes**, aparecem até 30 textos não protegidos acessados ou criados. Textos protegidos continuam acessíveis pela biblioteca após autenticação.
+- **Personalizar.** Em **Opções → Aparência da biblioteca**, alterne lista/grade e ajuste densidade e tamanho dos ícones. Use **Cor da pasta** no menu de contexto. Essas preferências acompanham o perfil local.
+- **Ler em foco.** Abra um documento e pressione F11 ou escolha **Modo foco**. O texto fica pronto para acompanhar com ou sem áudio. A narração mantém voz, velocidade, volume, pausas e destaque. F11 sai do foco e Ctrl+L volta à biblioteca.
+
+A versão 2.0.0 abre o mesmo banco da 1.3.0. O aplicativo cria uma cópia de segurança ao migrar um banco anterior ao esquema 2. [Procedimento de restauração](MIGRACAO-1.3.0.md).
 
 ## Correções da versão 1.2.1
 
@@ -33,10 +43,10 @@ A captura final do cursor ocorre antes de parar/resetar o dispositivo. Trocas de
 
 Modelos Piper inválidos usam a alternativa Windows durante a sessão, sem tentar novamente o mesmo modelo a cada frase. Abrir/reparar os recursos de voz permite nova tentativa. Listas numeradas não viram frases isoladas nem títulos por causa do marcador, abreviações adicionais são preservadas e cortes internos de títulos longos não acrescentam pausas artificiais. Os quatro modos e preferências não são redefinidos. O destaque pode ser ligado/desligado em Reprodução, independentemente da rolagem.
 
-Resultados, causa raiz, cenários de 1.000 a 50.000 palavras e limites: `VALIDACAO.md`, `DESEMPENHO-1.2.1.md` e `REPRODUCAO-1.2.1.md`.
+Resultados, causa raiz, cenários de 1.000 a 50.000 palavras e limites: `releases/1.3.0/RELATORIO-VALIDACAO.md`, `DESEMPENHO-1.2.1.md` e `REPRODUCAO-1.2.1.md`.
 ## Interface e configurações
 
-Cabeçalho com marca, privacidade local, novo/colar, tema rápido, ajuda e configurações. Biblioteca à esquerda, editor/leitura ao centro e narração à direita. O player mostra estado, tempo decorrido, duração, percentual e faixa já processada. Estados vazios, busca sem resultados e geração de áudio têm orientação própria.
+O cabeçalho alterna entre Biblioteca e Leitura e dá acesso ao tema, à ajuda e às configurações. A leitura reúne editor, acompanhamento, ajustes de voz e player. O player mostra estado, tempo decorrido, duração, percentual e faixa já processada.
 
 A engrenagem organiza **Aparência** (tema/fonte), **Reprodução** (segundo plano/rolagem automática) e **Privacidade e segurança** (PIN, bloqueio inicial, alteração do PIN, bloquear sessão e proteção individual). A lateral principal contém voz, prévia, vozes offline, modo, velocidade, volume e ajustes recolhíveis de pausas/tom/transição.
 
@@ -122,7 +132,7 @@ O script prepara SDK .NET 10 em `.tools/dotnet` quando necessário, restaura dep
 
 Use `LEITOR_DATA_DIR` para redirecionar biblioteca/cofre/runtime/modelos a uma pasta **isolada de testes**. Testes de reprodução usam volume zero e precisam de dispositivo de áudio. O conjunto padrão tem 34 testes; Piper exige runtime/voz local e informa quando indisponível. `LEITOR_TEST_DOWNLOADS=1` acrescenta o teste de downloads reais (35 no ambiente completo). Para repetir só um cenário, passe `--filter=<parte do nome>` ao runner; isso não substitui a regressão completa. O instalador Piper também pode ser executado isoladamente: `scripts/Install-Piper.ps1 -Destination <pasta-de-testes>\piper`.
 
-`tests/Leitor.Bench` compara processamento, consultas da timeline, troca de recursos de tema e janela vazia entre DLLs. Métodos, resultados, testes e pendências estão em `VALIDACAO.md`; auditoria em `SEGURANCA-1.2.md`. A entrega inclui relatório e SHA256SUMS em artifacts. Nenhum commit, push ou publicação externa faz parte desta entrega.
+`tests/Leitor.Bench` compara processamento, consultas da timeline, troca de recursos de tema e janela vazia entre DLLs. Métodos, resultados, testes e pendências estão em `releases/1.3.0/RELATORIO-VALIDACAO.md`; auditoria em `SEGURANCA-1.2.md`. Os relatórios ficam em `docs/releases/` e os checksums acompanham os pacotes em `artifacts/<versão>/`. Nenhum commit, push ou publicação externa faz parte desta entrega.
 
 ## Arquitetura
 
@@ -135,6 +145,25 @@ Use `LEITOR_DATA_DIR` para redirecionar biblioteca/cofre/runtime/modelos a uma p
 - `tests`: regressão integrada e medições; `installer`: distribuição por usuário e desinstalação registrada.
 
 `ISpeechEngine` desacopla síntese de reprodução; textos são enviados como dados JSON, sem construir comandos de shell. A estrutura permanece modular para evoluções futuras.
+
+```mermaid
+flowchart TB
+    UI["Telas WPF e XAML"] --> VM["MainViewModel · comandos MVVM"]
+    VM --> TEXT["TextProcessor e PlaybackTimeline"]
+    VM --> PLAY["Playback · transporte e saída NAudio"]
+    VM --> STORE["LibraryStore e SettingsStore"]
+    VM --> VAULT["Vault · PIN, sessão e chaves"]
+    STORE --> DB[("SQLite local")]
+    STORE --> PREF["Preferências JSON locais"]
+    STORE --> VAULT
+    PLAY --> CONTRACT["ISpeechEngine"]
+    CONTRACT --> SPEECH["SpeechService"]
+    SPEECH --> WINDOWS["WindowsSpeechEngine · SAPI"]
+    SPEECH --> PIPER["PiperSpeechEngine · processo Python local"]
+    UI --> DOWNLOAD["VoiceDownloads e instalação de recursos"]
+    DOWNLOAD --> FILES["Runtime e modelos locais"]
+    FILES --> PIPER
+```
 
 ## Limitações e histórico
 

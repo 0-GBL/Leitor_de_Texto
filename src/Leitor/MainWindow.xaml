@@ -1,45 +1,69 @@
 <Window x:Class="Leitor.MainWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:p="clr-namespace:Leitor.Presentation"
  Title="Leitor — Seu tempo, seu ritmo, sua leitura" Icon="Assets/Leitor.ico" Width="1440" Height="940" MinWidth="800" MinHeight="640" Background="{DynamicResource BackgroundBrush}" Foreground="{DynamicResource TextBrush}" FontFamily="Segoe UI" FontSize="14" WindowStartupLocation="CenterScreen" Loaded="OnLoaded" Closing="OnClosing" PreviewKeyDown="HandleKeyDown" SizeChanged="AdaptiveLayout">
- <Grid Margin="24">
+ <Border Background="{DynamicResource BackgroundBrush}" Padding="22,14,22,12">
+ <Grid>
   <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
-  <Grid Margin="0,0,0,22"><Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-   <StackPanel Orientation="Horizontal"><Border Width="46" Height="46" CornerRadius="13" Background="{DynamicResource AccentBrush}" VerticalAlignment="Top" Margin="0,3,14,0"><p:AppIcon Kind="Book" Width="27" Height="27" Foreground="{DynamicResource OnAccentBrush}"/></Border><StackPanel><TextBlock Text="Leitor" FontSize="29" FontWeight="SemiBold"/><TextBlock Text="Seu tempo, seu ritmo, sua leitura" Style="{StaticResource Caption}" Margin="0,2,0,0"/></StackPanel></StackPanel>
-   <WrapPanel Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Center">
-    <Border Background="{DynamicResource SelectionBrush}" CornerRadius="14" Padding="11,8" Margin="0,0,16,0" VerticalAlignment="Center"><StackPanel Orientation="Horizontal"><p:AppIcon Kind="Shield" Width="15" Height="15" Margin="0,0,7,0"/><TextBlock Text="Local e privado" FontSize="12"/></StackPanel></Border>
-    <Button Command="{Binding NewCommand}" ToolTip="Novo texto · Ctrl+N" AutomationProperties.Name="Novo texto"><StackPanel Orientation="Horizontal"><p:AppIcon Kind="Plus" Margin="0,0,7,0"/><TextBlock Text="Novo texto"/></StackPanel></Button>
-    <Button Command="{Binding PasteCommand}" ToolTip="Colar texto · Ctrl+V no editor" AutomationProperties.Name="Colar texto"><StackPanel Orientation="Horizontal"><p:AppIcon Kind="Clipboard" Margin="0,0,7,0"/><TextBlock Text="Colar"/></StackPanel></Button>
-    <Button x:Name="ThemeToggleButton" Command="{Binding ToggleThemeCommand}" ToolTip="Alternar tema · Ctrl+T" AutomationProperties.Name="{Binding ThemeActionLabel}"><StackPanel Orientation="Horizontal"><p:AppIcon Kind="{Binding ThemeIconName}" Margin="0,0,7,0"/><TextBlock Text="{Binding ThemeActionLabel}"/></StackPanel></Button>
+  <DockPanel Margin="0,0,0,14" LastChildFill="False">
+   <StackPanel DockPanel.Dock="Left" Orientation="Horizontal">
+    <p:AppIcon Kind="Book" Width="23" Height="23" Margin="4,0,10,0"/>
+    <TextBlock Text="Leitor" FontSize="22" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,20,0"/>
+    <Button Content="Biblioteca" Command="{Binding ShowLibraryCommand}" ToolTip="Biblioteca · Ctrl+L">
+     <Button.Style><Style TargetType="Button" BasedOn="{StaticResource QuietButton}"><Style.Triggers>
+      <DataTrigger Binding="{Binding LibraryVisible}" Value="True"><Setter Property="Background" Value="{DynamicResource SelectionBrush}"/><Setter Property="FontWeight" Value="SemiBold"/></DataTrigger>
+     </Style.Triggers></Style></Button.Style>
+    </Button>
+    <Button Content="Leitura" Command="{Binding ShowReaderCommand}" ToolTip="Leitura atual">
+     <Button.Style><Style TargetType="Button" BasedOn="{StaticResource QuietButton}"><Style.Triggers>
+      <DataTrigger Binding="{Binding ReadingVisible}" Value="True"><Setter Property="Background" Value="{DynamicResource SelectionBrush}"/><Setter Property="FontWeight" Value="SemiBold"/></DataTrigger>
+     </Style.Triggers></Style></Button.Style>
+    </Button>
+   </StackPanel>
+   <WrapPanel DockPanel.Dock="Right" VerticalAlignment="Center">
+    <Button Content="Novo texto" Command="{Binding NewCommand}" ToolTip="Novo texto · Ctrl+N"
+     Visibility="{Binding EditingVisible, Converter={StaticResource BoolVisibility}}"/>
+    <Button Content="Colar" Command="{Binding PasteCommand}" Style="{StaticResource QuietButton}" ToolTip="Colar no editor"
+     Visibility="{Binding EditingVisible, Converter={StaticResource BoolVisibility}}"/>
+    <Button Command="{Binding ToggleFocusCommand}" ToolTip="Alternar modo foco · F11"
+     Visibility="{Binding ReadingVisible, Converter={StaticResource BoolVisibility}}">
+     <Button.Style><Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+      <Setter Property="Content" Value="Modo foco"/>
+      <Style.Triggers><DataTrigger Binding="{Binding FocusMode}" Value="True"><Setter Property="Content" Value="Sair do foco"/></DataTrigger></Style.Triggers>
+     </Style></Button.Style>
+    </Button>
+    <Button x:Name="ThemeToggleButton" Command="{Binding ToggleThemeCommand}" Style="{StaticResource IconButton}"
+     ToolTip="{Binding ThemeActionLabel}" AutomationProperties.Name="{Binding ThemeActionLabel}"><p:AppIcon Kind="{Binding ThemeIconName}"/></Button>
     <Button x:Name="HelpButton" Style="{StaticResource IconButton}" Click="OpenHelp" ToolTip="Ajuda e atalhos · F1" AutomationProperties.Name="Ajuda e atalhos"><p:AppIcon Kind="Help"/></Button>
     <Button Style="{StaticResource IconButton}" Click="OpenSettings" ToolTip="Configurações · Ctrl+vírgula" AutomationProperties.Name="Abrir configurações"><p:AppIcon Kind="Settings"/></Button>
    </WrapPanel>
-  </Grid>
-  <Grid Grid.Row="1"><Grid.ColumnDefinitions><ColumnDefinition x:Name="LibraryColumn" Width="246" MinWidth="200"/><ColumnDefinition Width="16"/><ColumnDefinition x:Name="ContentColumn" Width="*" MinWidth="330"/><ColumnDefinition Width="16"/><ColumnDefinition x:Name="NarrationColumn" Width="272"/></Grid.ColumnDefinitions>
-   <p:LibraryPanel x:Name="Sidebar"/>
-   <GridSplitter Grid.Column="1" Width="6" HorizontalAlignment="Center" VerticalAlignment="Stretch" ResizeBehavior="PreviousAndNext" ResizeDirection="Columns" DragCompleted="LibraryResized" Focusable="True" ToolTip="Redimensionar biblioteca" AutomationProperties.Name="Largura da biblioteca" Background="{DynamicResource BorderBrush}"/>
-   <Border Grid.Column="2" Style="{StaticResource Card}" Padding="24,20">
+  </DockPanel>
+  <p:LibraryPanel x:Name="Sidebar" Grid.Row="1" Visibility="{Binding LibraryVisible, Converter={StaticResource BoolVisibility}}"/>
+  <TextBlock Grid.Row="2" Text="{Binding Status}" TextWrapping="Wrap" Foreground="{DynamicResource MutedBrush}"
+    Margin="0,8,0,0" Visibility="{Binding LibraryVisible, Converter={StaticResource BoolVisibility}}" AutomationProperties.LiveSetting="Polite"/>
+  <Grid Grid.Row="1" Visibility="{Binding ReadingVisible, Converter={StaticResource BoolVisibility}}">
+   <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="16"/><ColumnDefinition x:Name="NarrationColumn" Width="272"/></Grid.ColumnDefinitions>
+   <Border Style="{StaticResource Card}" Padding="24,16">
     <DockPanel>
-     <StackPanel DockPanel.Dock="Top"><TextBlock Text="SEU ESPAÇO DE LEITURA" Style="{StaticResource Caption}" FontSize="10" FontWeight="SemiBold" Margin="0,0,0,8"/>
+     <StackPanel DockPanel.Dock="Top" Visibility="{Binding EditingVisible, Converter={StaticResource BoolVisibility}}">
       <TextBox Text="{Binding Title, UpdateSourceTrigger=PropertyChanged}" FontSize="25" FontWeight="SemiBold" BorderThickness="0" Padding="0,2,0,10" Background="Transparent" AutomationProperties.Name="Título do texto"/>
       <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><TextBox Text="{Binding Tags, UpdateSourceTrigger=PropertyChanged}" ToolTip="Etiquetas separadas por vírgula: estudos, trabalho" AutomationProperties.Name="Etiquetas separadas por vírgula" Padding="10,8" FontSize="12" Margin="0,0,10,14"/><Button Grid.Column="1" Command="{Binding SaveCommand}" ToolTip="Salvar texto · Ctrl+S" AutomationProperties.Name="Salvar texto" MinHeight="36" Padding="11,7" Margin="0,0,0,14"><StackPanel Orientation="Horizontal"><p:AppIcon Kind="Save" Width="15" Height="15" Margin="0,0,7,0"/><TextBlock Text="Salvar" FontSize="12"/></StackPanel></Button></Grid>
      </StackPanel>
      <TabControl SelectedIndex="{Binding SelectedTab}">
-      <TabItem Header="Escrever"><Grid Margin="0,7,0,0" TextElement.FontWeight="Normal"><Grid.RowDefinitions><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions><TextBlock Grid.Row="1" Text="{Binding StatisticsLabel}" FontSize="10" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap" Margin="0,8,0,0" ToolTip="Inclui espaços e quebras; linhas lógicas são as separadas no texto, não as quebras visuais. O tempo é estimado." AutomationProperties.LiveSetting="Polite"/>
+      <TabItem Header="Escrever" Visibility="{Binding EditingVisible, Converter={StaticResource BoolVisibility}}"><Grid Margin="0,7,0,0" TextElement.FontWeight="Normal"><Grid.RowDefinitions><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions><TextBlock Grid.Row="1" Text="{Binding StatisticsLabel}" FontSize="10" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap" Margin="0,8,0,0" ToolTip="Inclui espaços e quebras; linhas lógicas são as separadas no texto, não as quebras visuais. O tempo é estimado." AutomationProperties.LiveSetting="Polite"/>
        <TextBox x:Name="EditorBox" TextChanged="EditorTextChanged" Text="{Binding Content, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" AcceptsTab="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" FontSize="{Binding Settings.FontSize}" BorderThickness="0" Padding="2,12" Margin="0" Background="Transparent" SpellCheck.IsEnabled="False" AutomationProperties.Name="Texto original para leitura"/>
-       <StackPanel Margin="4,20" IsHitTestVisible="False"><StackPanel.Style><Style TargetType="StackPanel"><Setter Property="Visibility" Value="Collapsed"/><Style.Triggers><DataTrigger Binding="{Binding Content}" Value=""><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers></Style></StackPanel.Style><TextBlock Text="Uma ideia, um capítulo,&#10;uma nova leitura." FontSize="25" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap"/><TextBlock Text="Digite ou cole seu texto aqui.&#10;Quando estiver pronto, deixe o Leitor dar voz às palavras." Margin="0,16,0,0" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap" LineHeight="23"/></StackPanel>
       </Grid></TabItem>
       <TabItem Header="Acompanhar"><DockPanel Margin="0,8,0,0" TextElement.FontWeight="Normal">
-       <TextBlock DockPanel.Dock="Top" Text="O trecho atual acompanha a voz. Selecione outra frase e use Enter para ir até ela." Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,0,0,14"/>
+       <TextBlock DockPanel.Dock="Top" Text="{Binding Title}" FontSize="24" FontWeight="SemiBold" Margin="0,0,0,12" TextTrimming="CharacterEllipsis" Visibility="{Binding FocusMode, Converter={StaticResource BoolVisibility}}"/>
        <Grid><TextBlock Text="Inicie a leitura para acompanhar o texto aqui." Visibility="{Binding ReadingEmpty, Converter={StaticResource BoolVisibility}}" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap" Margin="12,28"/>
        <ListBox x:Name="ReaderList" ItemsSource="{Binding Segments}" SelectedItem="{Binding SelectedSegment}" VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling" ScrollViewer.CanContentScroll="True" AutomationProperties.Name="Frases e títulos do texto" MouseDoubleClick="JumpToSegment">
         <ListBox.ItemContainerStyle><Style TargetType="ListBoxItem"><Setter Property="HorizontalContentAlignment" Value="Stretch"/><Setter Property="Padding" Value="15,12"/><Setter Property="Margin" Value="0,3"/><Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ListBoxItem"><Border x:Name="Highlight" CornerRadius="10" Padding="{TemplateBinding Padding}" BorderThickness="3,1,1,1" BorderBrush="Transparent"><ContentPresenter/></Border><ControlTemplate.Triggers><Trigger Property="IsSelected" Value="True"><Setter TargetName="Highlight" Property="BorderBrush" Value="{DynamicResource BorderBrush}"/></Trigger><MultiDataTrigger><MultiDataTrigger.Conditions><Condition Binding="{Binding IsNarrating}" Value="True"/><Condition Binding="{Binding DataContext.Settings.Highlight, RelativeSource={RelativeSource AncestorType=Window}}" Value="True"/></MultiDataTrigger.Conditions><Setter TargetName="Highlight" Property="Background" Value="{DynamicResource HighlightBrush}"/><Setter TargetName="Highlight" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/></MultiDataTrigger><Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="Highlight" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/></Trigger></ControlTemplate.Triggers></ControlTemplate></Setter.Value></Setter></Style></ListBox.ItemContainerStyle>
-        <ListBox.ItemTemplate><DataTemplate><StackPanel><TextBlock Text="TRECHO ATUAL" Visibility="{Binding IsNarrating, Converter={StaticResource BoolVisibility}}" Foreground="{DynamicResource AccentBrush}" FontWeight="SemiBold" FontSize="10" Margin="0,0,0,6"/><TextBlock Text="{Binding Text}" TextWrapping="Wrap" FontSize="{Binding DataContext.Settings.FontSize, RelativeSource={RelativeSource AncestorType=Window}}" LineHeight="{Binding DataContext.Settings.FontSize, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource ReadingLineHeight}}"><TextBlock.Style><Style TargetType="TextBlock"><Style.Triggers><DataTrigger Binding="{Binding Heading}" Value="True"><Setter Property="FontWeight" Value="SemiBold"/><Setter Property="Margin" Value="0,9,0,5"/></DataTrigger></Style.Triggers></Style></TextBlock.Style></TextBlock></StackPanel></DataTemplate></ListBox.ItemTemplate>
+        <ListBox.ItemTemplate><DataTemplate><StackPanel><TextBlock Text="{Binding Text}" TextWrapping="Wrap" FontSize="{Binding DataContext.Settings.FontSize, RelativeSource={RelativeSource AncestorType=Window}}" LineHeight="{Binding DataContext.Settings.FontSize, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource ReadingLineHeight}}"><TextBlock.Style><Style TargetType="TextBlock"><Style.Triggers><DataTrigger Binding="{Binding Heading}" Value="True"><Setter Property="FontWeight" Value="SemiBold"/><Setter Property="Margin" Value="0,9,0,5"/></DataTrigger></Style.Triggers></Style></TextBlock.Style></TextBlock></StackPanel></DataTemplate></ListBox.ItemTemplate>
        </ListBox></Grid>
       </DockPanel></TabItem>
      </TabControl>
     </DockPanel>
    </Border>
-   <Border Grid.Column="4" Style="{StaticResource Card}" Padding="18,20"><ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"><StackPanel>
-    <TextBlock Text="Sua leitura" FontSize="19" FontWeight="SemiBold" Margin="0,0,0,6"/><TextBlock Text="Encontre a voz do seu ritmo." Style="{StaticResource Caption}" Margin="0,0,0,23"/>
+   <Border Grid.Column="2" Style="{StaticResource Card}" Padding="16"><ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"><StackPanel>
+    <TextBlock Text="Narração" FontSize="17" FontWeight="SemiBold" Margin="0,0,0,12"/>
     <TextBlock Text="Voz" FontWeight="SemiBold" FontSize="12"/><ComboBox ItemsSource="{Binding Voices}" SelectedItem="{Binding SelectedVoice}" ToolTip="Selecionar voz local para narração" AutomationProperties.Name="Selecionar voz" MaxWidth="235"><ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" ToolTip="{Binding}"/></DataTemplate></ComboBox.ItemTemplate></ComboBox>
     <Grid Margin="0,0,0,22"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions><Button Command="{Binding PreviewCommand}" ToolTip="Ouvir uma amostra da voz selecionada" AutomationProperties.Name="Prévia da voz" Padding="8"><StackPanel Orientation="Horizontal"><p:AppIcon Kind="Speaker" Width="15" Height="15" Margin="0,0,6,0"/><TextBlock Text="Prévia" FontSize="12"/></StackPanel></Button><Button Grid.Column="1" Content="Vozes offline" Click="ManageVoices" ToolTip="Instalar Piper e gerenciar vozes offline" Padding="7" FontSize="12" Margin="0"/></Grid>
     <TextBlock Text="Modo de leitura" FontWeight="SemiBold" FontSize="12"/><ComboBox x:Name="ModeSelector" ItemsSource="{Binding Modes}" SelectedItem="{Binding Settings.Mode}" SelectionChanged="ModeChanged" ToolTip="Natural, Rápida, Estudos ou Personalizada" AutomationProperties.Name="Modo de leitura"/>
@@ -53,8 +77,8 @@
     <Expander Header="Transição de voz"><StackPanel Margin="0,14,0,0"><TextBlock Text="Aplicar a próxima voz" Style="{StaticResource Caption}"/><ComboBox ItemsSource="{Binding Transitions}" SelectedItem="{Binding Settings.Transition}" SelectionChanged="SelectionSettingChanged" AutomationProperties.Name="Transição da voz" ToolTip="Imediata, ao final da frase ou do parágrafo"/></StackPanel></Expander>
    </StackPanel></ScrollViewer></Border>
   </Grid>
-  <Border Grid.Row="2" Style="{StaticResource Card}" Padding="20,16" Margin="0,18,0,0"><StackPanel>
-   <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><StackPanel Orientation="Horizontal"><p:AppIcon Kind="Speaker" Width="15" Height="15" Margin="0,0,8,0"/><TextBlock Text="{Binding ReadingState}" FontSize="12" FontWeight="SemiBold"/><TextBlock Text="  ·  seu áudio permanece no computador" FontSize="12" Foreground="{DynamicResource MutedBrush}"/></StackPanel><TextBlock Grid.Column="1" Text="{Binding PercentLabel}" FontSize="12" FontWeight="SemiBold"/></Grid>
+  <Border Grid.Row="2" Style="{StaticResource Card}" Padding="16,12" Margin="0,12,0,0" Visibility="{Binding ReadingVisible, Converter={StaticResource BoolVisibility}}"><StackPanel>
+   <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><StackPanel Orientation="Horizontal"><p:AppIcon Kind="Speaker" Width="15" Height="15" Margin="0,0,8,0"/><TextBlock Text="{Binding ReadingState}" FontSize="12" FontWeight="SemiBold"/></StackPanel><TextBlock Grid.Column="1" Text="{Binding PercentLabel}" FontSize="12" FontWeight="SemiBold"/></Grid>
    <TextBlock x:Name="SeekPreviewText" Visibility="Collapsed" FontSize="11" HorizontalAlignment="Center" Foreground="{DynamicResource MutedBrush}" AutomationProperties.LiveSetting="Polite"/>
    <Grid Margin="0,9,0,8"><Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><TextBlock Text="{Binding ElapsedLabel}" FontFamily="Consolas" FontSize="12" VerticalAlignment="Center" Margin="0,0,12,0"/><Grid Grid.Column="1"><ProgressBar Value="{Binding BufferedProgress, Mode=OneWay}" Maximum="100" Height="4" Background="{DynamicResource BorderBrush}" Foreground="{DynamicResource BufferedBrush}" VerticalAlignment="Center" Margin="7,0"/><p:SeekSlider x:Name="Timeline" Background="Transparent" Value="{Binding Progress, Mode=OneWay}" Maximum="100" IsSnapToTickEnabled="False" Margin="0" InteractionStarted="SeekStarted" InteractionEnded="SeekEnded" PreviewPositionChanged="SeekPreview" SeekCommitted="SeekReleased" ToolTipService.InitialShowDelay="0" ToolTipService.ShowDuration="60000" AutomationProperties.Name="Posição da leitura em porcentagem" ToolTip="Clique ou arraste para navegar; setas: 5 s; Home/End: início/final; ≈ indica estimativa"/></Grid><TextBlock Grid.Column="2" Text="{Binding DurationLabel}" FontFamily="Consolas" FontSize="12" VerticalAlignment="Center" Margin="12,0,0,0"/></Grid>
    <WrapPanel VerticalAlignment="Center"><StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,16,0">
@@ -70,4 +94,5 @@
    <TextBlock Text="{Binding Status}" TextWrapping="Wrap" Margin="0,10,0,0" FontSize="11" Foreground="{DynamicResource MutedBrush}" AutomationProperties.LiveSetting="Polite"/>
   </StackPanel></Border>
  </Grid>
+ </Border>
 </Window>

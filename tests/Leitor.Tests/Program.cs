@@ -208,7 +208,6 @@ static partial class Program
         });
         Run("Dispositivo de áudio e leitura progressiva: pausa, retomada, troca e cancelamento", () =>
         {
-            Console.WriteLine($"  dispositivos de saída: {WaveOut.DeviceCount}");
             var engine = new WindowsSpeechEngine(); using var player = new Playback(engine);
             string? error = null; player.Error += e => error = e;
             player.SetVolume(0);
@@ -354,6 +353,19 @@ static partial class Program
         Run("WPF: temas, configurações, modos, destaque independente e reiniciar", () => VerifyInterface(root));
         Run("WPF: barra acessível, teclado, prévia congelada, documentos e recuperação SQLite", () => VerifySeekingInterface(root));
         Run("WPF biblioteca 1.3: pastas, menus, edição, contadores e preferências",()=>VerifyLibraryInterface(root));
+        Run("WPF biblioteca 2.0: navegação, grade, temas, recentes e modo foco com áudio",()=>VerifyExplorerInterface(root));
+        Run("Biblioteca 2.0: novas preferências de grade e painel sobrevivem à gravação", () =>
+        {
+            var store = new SettingsStore(Path.Combine(root, "sidebar-preferences"));
+            var settings = store.Load();
+            Check(settings.LibraryGrid && settings.LibraryIconSize == 30 && !settings.LibrarySidebarCollapsed, "Padrões da biblioteca divergiram");
+            settings.LibraryGrid = false;
+            settings.LibrarySidebarCollapsed = true;
+            settings.LibraryWidth = 333;
+            store.Save(settings);
+            var restored = store.Load();
+            Check(!restored.LibraryGrid && restored.LibrarySidebarCollapsed && restored.LibraryWidth == 333, "Grade, recolhimento ou largura não persistiram");
+        });
         if (Environment.GetEnvironmentVariable("LEITOR_TEST_DOWNLOADS") == "1")
             Run("Download real de Faber e Edresson pelo mesmo serviço da interface", () =>
             {
@@ -415,7 +427,7 @@ static partial class Program
         var previousContext = SynchronizationContext.Current;
         SynchronizationContext.SetSynchronizationContext(new DispatcherSynchronizationContext(Dispatcher.CurrentDispatcher));
         Console.WriteLine("  WPF: carregando recursos");
-        if (Application.Current == null) { var app = new Leitor.App(error => uiFault = error); app.InitializeComponent(); app.ShutdownMode = ShutdownMode.OnExplicitShutdown; }
+        EnsureTestApplication();
         Console.WriteLine("  WPF: criando ViewModel");
         var emptyModel = new MainViewModel(Path.Combine(root, "empty-interface"));
         Console.WriteLine("  WPF: ViewModel pronto; carregando XAML");
@@ -430,9 +442,11 @@ static partial class Program
             PumpUntil(() => window.IsLoaded); AwaitUI(vm.InitializeAsync());
             window.UpdateLayout();
             Check(((TextBox)window.FindName("EditorBox")).FontWeight == FontWeights.Normal, "Texto do editor herdou peso do cabeçalho");
-            Check(((TextBox)window.FindName("SearchBox")).ActualHeight < 55, "Padding duplicado no campo de busca");
+            Check(window.SearchBox.ActualHeight is > 0 and < 55, "Padding duplicado no campo de busca");
             window.Width = 950; window.UpdateLayout();
-            Check(((ColumnDefinition)window.FindName("LibraryColumn")).ActualWidth >= 200 && ((ColumnDefinition)window.FindName("LibraryColumn")).ActualWidth <= 400, "Layout compacto não adaptou os painéis");
+            var libraryColumn = (ColumnDefinition)((LibraryPanel)window.FindName("Sidebar")).FindName("LibraryColumn");
+            Check(libraryColumn.ActualWidth is >= 200 and <= 400, "Layout compacto não adaptou os painéis");
+            vm.ShowReaderCommand.Execute(null);
             Check(((SolidColorBrush)Application.Current!.Resources["BackgroundBrush"]).Color.ToString() == "#FFF5EFE4", "Paleta clara incorreta");
             vm.ToggleThemeCommand.Execute(null);
             Check(vm.ThemeActionLabel.Contains("Tema claro") && ((SolidColorBrush)Application.Current.Resources["BackgroundBrush"]).Color.ToString() == "#FF111925", "Tema escuro/toggle incorretos");
@@ -440,8 +454,9 @@ static partial class Program
             bool helpOpened = false;
             var closeHelp = new DispatcherTimer(TimeSpan.FromMilliseconds(30), DispatcherPriority.Normal, (_, _) =>
             { var help = Application.Current.Windows.OfType<Leitor.HelpWindow>().FirstOrDefault(); if (help != null) { helpOpened = true; help.Close(); } }, Dispatcher.CurrentDispatcher);
-            closeHelp.Start(); window.RaiseEvent(new KeyEventArgs(Keyboard.PrimaryDevice, PresentationSource.FromVisual(window), 0, Key.F1) { RoutedEvent = Keyboard.PreviewKeyDownEvent }); closeHelp.Stop();
-            Check(helpOpened && Shortcuts.Groups.Count == 5, "F1 não abriu a central de ajuda");
+            var helpKey = new KeyEventArgs(Keyboard.PrimaryDevice, PresentationSource.FromVisual(window), 0, Key.F1) { RoutedEvent = Keyboard.PreviewKeyDownEvent };
+            closeHelp.Start(); window.RaiseEvent(helpKey); closeHelp.Stop();
+            Check(helpOpened && Shortcuts.Groups.Count == 5, $"F1 não abriu a central de ajuda ({Keyboard.Modifiers}, {helpKey.Key}, {helpKey.Handled})");
             Check(Leitor.MainWindow.IsEditing((DependencyObject)window.FindName("EditorBox")), "Editor não identificado pelo contexto dos atalhos");
             var settings = new Leitor.SettingsWindow(vm) { Owner = window }; settings.Show(); PumpUntil(() => settings.IsLoaded); settings.Close();
             var mode = (ComboBox)window.FindName("ModeSelector"); mode.SelectedItem = "Estudos";
@@ -506,6 +521,7 @@ static partial class Program
     private static void VerifySeekingInterface(string root)
     {
         var oldContext = SynchronizationContext.Current; SynchronizationContext.SetSynchronizationContext(new DispatcherSynchronizationContext(Dispatcher.CurrentDispatcher));
+        EnsureTestApplication();
         var engine = new ControlledEngine(); var vm = new MainViewModel(Path.Combine(root, "seeking-interface"), engine); var window = new Leitor.MainWindow(vm) { ShowActivated = false, ShowInTaskbar = false, WindowStartupLocation = WindowStartupLocation.Manual, Left = -20000 }; window.Show();
         try
         {
@@ -525,7 +541,7 @@ static partial class Program
             Pointer("BeginPointer", 8 + span * .80, false); slider.CancelInteraction();
             Check(Math.Abs(vm.Player.Position - cancelledPosition) < .01, "Cancelar arraste alterou o áudio"); before = slider.Value;
             slider.RaiseEvent(new KeyEventArgs(Keyboard.PrimaryDevice, PresentationSource.FromVisual(slider), 0, Key.Right) { RoutedEvent = Keyboard.PreviewKeyDownEvent });
-            Check(slider.IsInteracting && slider.Value > before && ((TextBlock)window.FindName("SeekPreviewText")).Text.Contains("Prévia"), "Tecla não exibiu prévia");
+            Check(slider.IsInteracting && slider.Value > before && ((TextBlock)window.FindName("SeekPreviewText")).Text.Contains("Prévia"), $"Tecla não exibiu prévia ({Keyboard.Modifiers}, {slider.IsVisible}, {slider.IsInteracting}, {before}, {slider.Value})");
             double preview = slider.Value; vm.Raise(nameof(vm.Progress)); window.UpdateLayout(); Check(Math.Abs(slider.Value - preview) < .0001, "Tick automático disputou o cursor");
             slider.RaiseEvent(new KeyEventArgs(Keyboard.PrimaryDevice, PresentationSource.FromVisual(slider), 0, Key.Right) { RoutedEvent = Keyboard.PreviewKeyUpEvent });
             PumpUntil(() => !slider.IsInteracting && !vm.Player.Preparing); Check(vm.Player.Paused, "Teclado retomou áudio pausado");
