@@ -6,11 +6,13 @@
     <ApplicationIcon>Assets/Leitor.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>
+    <InternalsVisibleTo Include="Leitor.Tests"/>
     <Compile Include="../../shared/SafeArchive.cs" Link="Security/SafeArchive.cs"/>
     <Resource Include="Assets/Leitor.ico"/>
     <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.15"/>
     <PackageReference Include="System.Speech" Version="10.0.0"/>
     <PackageReference Include="NAudio.WinMM" Version="2.2.1"/>
+    <PackageReference Include="NAudio.Wasapi" Version="2.2.1"/>
     <Content Include="../../runtime/piper_worker.py" Link="runtime/piper_worker.py" CopyToOutputDirectory="PreserveNewest"/>
     <Content Include="../../runtime/check_piper.py" Link="runtime/check_piper.py" CopyToOutputDirectory="PreserveNewest"/>
     <Content Include="../../runtime/piper-requirements.txt" Link="runtime/piper-requirements.txt" CopyToOutputDirectory="PreserveNewest"/>

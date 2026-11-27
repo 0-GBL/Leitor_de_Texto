@@ -57,3 +57,5 @@ voices/
 *.backup-*
 
 /backups/
+*.mp3
+.leitor-*/

@@ -1,9 +1,9 @@
 [← Voltar à apresentação do projeto](../README.md)
 
-Atualizado para **2.0.0**. Para compatibilidade com formatos mais antigos e restauração, consulte [migração e backup](MIGRACAO-1.3.0.md).
+Atualizado para **2.1.0**. Para compatibilidade com formatos mais antigos e restauração, consulte [migração e backup](MIGRACAO-1.3.0.md).
 
 
-# Guia do usuário e desenvolvimento — Leitor 2.0.0
+# Guia do usuário e desenvolvimento — Leitor 2.1.0
 
 Os comandos deste guia são executados na raiz do repositório. Para a apresentação do projeto e as imagens atuais, consulte o [README](../README.md).
 
@@ -13,7 +13,7 @@ Construído em C#, .NET 10 LTS, WPF e MVVM, com SQLite, NAudio, System.Speech e 
 
 ## Instalação e uso
 
-1. Execute `artifacts/2.0.0/Leitor-Instalador.exe` (instalação por usuário) ou extraia `artifacts/2.0.0/Leitor-portatil.zip` e abra `Leitor.exe`.
+1. Execute `artifacts/2.1.0/Leitor-Instalador.exe` (instalação por usuário) ou extraia `artifacts/2.1.0/Leitor-portatil.zip` e abra `Leitor.exe`.
 2. Use **Novo texto**, digite ou cole conteúdo e informe título e etiquetas separadas por vírgula. O salvamento é automático; Ctrl+S salva imediatamente.
 3. Inicie a leitura e acompanhe a frase narrada na aba **Acompanhar**. A seleção manual não desloca o destaque; Enter vai até a frase selecionada.
 4. Use pausar/continuar, **Reiniciar leitura**, ±10 segundos e os grupos separados de parágrafos e títulos.
@@ -53,6 +53,17 @@ A engrenagem organiza **Aparência** (tema/fonte), **Reprodução** (segundo pla
 O botão do cabeçalho oferece **Tema escuro** com lua no claro e **Tema claro** com sol no escuro. A troca salva a preferência sem interromper a reprodução. O claro mantém a identidade de livro: fundo #F5EFE4, painéis #FFFBF5, texto #302820, bordas #DED0BD, ação #79583D e destaque #F5DDA0. O escuro mantém a identidade anterior. Cores centralizadas em `Themes/Light.xaml` e `Dark.xaml`; geometrias em `Icons.xaml` e estilos em `Controls.xaml`. Não há biblioteca externa de interface.
 
 Tab/Shift+Tab percorrem os controles; há nomes acessíveis, dicas com atalhos, foco visível e texto ajustável. Janelas se adaptam à área de trabalho, com painéis compactos em larguras menores e manifesto PerMonitorV2. Validação completa com Narrador/NVDA, várias escalas de DPI e teclado ABNT2 físico continua pendente.
+
+## Exportar um documento em MP3
+
+1. Abra o documento e vá para **Leitura**. Encerre uma eventual reprodução com Esc.
+2. Clique em **Exportar áudio**. O diálogo mostra o título, a voz, a qualidade e a duração aproximada quando disponível. Textos protegidos exigem PIN e confirmação.
+3. Clique em **Exportar**, escolha um nome livre em **Salvar como** e aguarde. Use **Cancelar** para interromper a geração.
+4. Transfira o MP3 para o celular e abra-o em um reprodutor compatível.
+
+O arquivo contém a narração do documento aberto, do início ao fim, em mono de 96 kbps. A exportação usa a voz, a velocidade, o tom quando suportado e as pausas do momento da abertura do diálogo. O volume do player controla a escuta local. O MP3 segue o nível de saída da voz, e o progresso do documento permanece no ponto original.
+
+O codificador faz parte do Windows Media Foundation. Em edições sem componentes de mídia, a exportação pode exigir o Media Feature Pack. O arquivo final é salvo no destino escolhido. Para abortos forçados do computador, pode restar uma pasta temporária privada com prefixo `.leitor-` no destino. Com a exportação encerrada, remova a pasta incompleta. O MP3 de um texto protegido pode ser ouvido por quem tiver acesso ao arquivo.
 
 ## Vozes offline e Piper
 

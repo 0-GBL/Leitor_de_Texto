@@ -1,5 +1,11 @@
 # Histórico de versões
 
+## 2.1.0 — 26/11/2026
+
+- Exportação individual do documento aberto em MP3 mono de 96 kbps, com voz Windows ou Piper, pausas, progresso por trechos e cancelamento.
+- Autorização por PIN para documentos protegidos e publicação do arquivo final após a codificação, com proteção contra sobrescrita.
+- [Relatório de validação](docs/releases/2.1.0/RELATORIO-VALIDACAO.md).
+
 ## 2.0.0 — 19/11/2026
 
 - Retirada a clonagem experimental e a análise de referência usada pelo protótipo. A distribuição estável usa Piper e as vozes do Windows.

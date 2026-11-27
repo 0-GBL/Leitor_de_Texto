@@ -350,6 +350,7 @@ static partial class Program
             Check(next.Length > 1000 && notices == 1, "Modelo inválido foi tentado novamente em cada frase");
         });
         RunLibraryTests(root);
+        RunMp3Tests(root);
         Run("WPF: temas, configurações, modos, destaque independente e reiniciar", () => VerifyInterface(root));
         Run("WPF: barra acessível, teclado, prévia congelada, documentos e recuperação SQLite", () => VerifySeekingInterface(root));
         Run("WPF biblioteca 1.3: pastas, menus, edição, contadores e preferências",()=>VerifyLibraryInterface(root));

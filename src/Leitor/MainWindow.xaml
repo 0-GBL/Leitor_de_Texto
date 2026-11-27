@@ -23,6 +23,8 @@
      Visibility="{Binding EditingVisible, Converter={StaticResource BoolVisibility}}"/>
     <Button Content="Colar" Command="{Binding PasteCommand}" Style="{StaticResource QuietButton}" ToolTip="Colar no editor"
      Visibility="{Binding EditingVisible, Converter={StaticResource BoolVisibility}}"/>
+    <Button Content="Exportar áudio" Click="OpenExport" Style="{StaticResource QuietButton}"
+     Visibility="{Binding ReadingVisible, Converter={StaticResource BoolVisibility}}"/>
     <Button Command="{Binding ToggleFocusCommand}" ToolTip="Alternar modo foco · F11"
      Visibility="{Binding ReadingVisible, Converter={StaticResource BoolVisibility}}">
      <Button.Style><Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">

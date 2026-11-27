@@ -3,7 +3,7 @@
 <p align="center"><strong>Seu tempo, seu ritmo, sua leitura.</strong></p>
 
 <p align="center">
-  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/vers%C3%A3o-2.0.0-79583D?style=flat-square" alt="Versão 2.0.0"></a>
+  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/vers%C3%A3o-2.1.0-79583D?style=flat-square" alt="Versão 2.1.0"></a>
   <img src="https://img.shields.io/badge/Windows-x64-302820?style=flat-square" alt="Windows x64">
 </p>
 
@@ -24,6 +24,8 @@ Desenvolver o Leitor me permitiu transformar essa necessidade em um aplicativo e
 - **Continuar de onde parou.** O aplicativo salva automaticamente o texto e mantém o progresso de cada documento.
 - **Personalizar a interface.** Escolha entre os temas claro bege e escuro, ajuste a fonte e personalize os ícones de pasta.
 - **Proteger documentos selecionados.** Ative a criptografia individual com um PIN opcional.
+
+- **Exportar áudio.** Salve a narração do documento aberto em MP3 para ouvir offline em outro dispositivo.
 
 ## Demonstração
 
@@ -58,7 +60,7 @@ O instalador ainda não possui assinatura digital Authenticode. As instruções 
 
 - [Guia do usuário](docs/GUIA-DO-USUARIO.md) e [arquitetura](docs/GUIA-DO-USUARIO.md#arquitetura)
 - [Segurança e privacidade](docs/SEGURANCA-1.2.md)
-- [Validação da versão 2.0.0](docs/releases/2.0.0/RELATORIO-VALIDACAO.md) e [relatórios históricos](docs/releases/)
+- [Validação da versão 2.1.0](docs/releases/2.1.0/RELATORIO-VALIDACAO.md) e [relatórios históricos](docs/releases/)
 - [Histórico de versões](CHANGELOG.md)
 
 ## Desenvolvedor

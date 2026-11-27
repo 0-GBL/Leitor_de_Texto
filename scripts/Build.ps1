@@ -31,8 +31,14 @@ if ($Package) {
     if ($LASTEXITCODE -ne 0) { throw 'Publicação falhou.' }
     Copy-Item -LiteralPath LICENSE -Destination (Join-Path $portable 'LICENSE.txt')
     Copy-Item -LiteralPath THIRD-PARTY-NOTICES.md,README.md,CHANGELOG.md -Destination $portable
-    $portableDocs = New-Item -ItemType Directory -Force -Path (Join-Path $portable 'docs')
-    Copy-Item -Path 'docs/*' -Destination $portableDocs.FullName -Recurse -Force
+    $docsRoot = (Resolve-Path 'docs').Path
+    foreach ($file in Get-ChildItem -LiteralPath $docsRoot -Recurse -File |
+        Where-Object { $_.Extension -in '.md','.png','.svg','.json','.txt' -and $_.FullName -notmatch '\\.leitor-[0-9a-f]{32}\\' }) {
+        $relative = $file.FullName.Substring($docsRoot.Length + 1)
+        $destination = Join-Path (Join-Path $portable 'docs') $relative
+        New-Item -ItemType Directory -Force -Path (Split-Path $destination) | Out-Null
+        Copy-Item -LiteralPath $file.FullName -Destination $destination
+    }
     Compress-Archive -Path (Join-Path $portable '*') -DestinationPath $portableArchive -Force
     $setupDirectory = Join-Path $staging.FullName 'installer'
     & $dotnetExe publish installer/Leitor.Setup.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true "-p:PayloadZip=$portableArchive" -o $setupDirectory
@@ -44,7 +50,7 @@ if ($Package) {
     $sourceArchive = Join-Path $delivery 'Leitor-codigo-fonte.zip'
     $sourceZip = [IO.Compression.ZipFile]::Open($sourceArchive, [IO.Compression.ZipArchiveMode]::Create)
     try {
-        $sourceFiles = Get-ChildItem -LiteralPath src,tests,installer,runtime,scripts,docs,shared -Recurse -File | Where-Object { $_.FullName -notmatch '\\(bin|obj|__pycache__|piper|voices)\\' -and $_.Name -notmatch '\.(db|onnx|part|pyc)$|^(vault|settings)\.json$|^auth-state\.bin$' }
+        $sourceFiles = Get-ChildItem -LiteralPath src,tests,installer,runtime,scripts,docs,shared -Recurse -File | Where-Object { $_.FullName -notmatch '\\(bin|obj|__pycache__|piper|voices|\.leitor-[0-9a-f]{32})\\' -and $_.Name -notmatch '\.(db|onnx|part|pyc|mp3|wav|m4a|flac|ogg)$|^(vault|settings)\.json$|^auth-state\.bin$' }
         $sourceFiles += Get-Item -LiteralPath LICENSE,README.md,CHANGELOG.md,THIRD-PARTY-NOTICES.md,Directory.Build.props,NuGet.Config,Iniciar.cmd,.gitignore
         foreach ($file in $sourceFiles) {
             $entryName = $file.FullName.Substring($projectRoot.TrimEnd('\').Length + 1).Replace('\', '/')

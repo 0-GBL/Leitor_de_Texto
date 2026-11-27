@@ -133,6 +133,28 @@ public sealed partial class MainViewModel : Observable, IDisposable
         InitializeOrganization(); autosave.Start(); ticker.Start();
     }
     private bool previewing;
+    internal ExportDocument? PrepareExport()
+    {
+        if (Player.Playing || IsBuffering || !PlayCommand.CanExecute(null) || !PreviewCommand.CanExecute(null) || !RestartCommand.CanExecute(null))
+        {
+            Status = "Encerre a reprodução (Esc) antes de exportar. A exportação usa o motor de voz exclusivamente.";
+            return null;
+        }
+        if (string.IsNullOrWhiteSpace(Content))
+        {
+            Status = "Abra ou escreva um documento com texto para exportar.";
+            return null;
+        }
+        if (IsProtected || current.Protected)
+        {
+            if (!SecurityDialog.Verify(Vault, "Desbloquear para exportar áudio")) return null;
+            if (MessageBox.Show("O MP3 ficará sem a criptografia do documento. Qualquer pessoa com acesso ao arquivo poderá ouvi-lo.",
+                "Exportar documento protegido", MessageBoxButton.OKCancel, MessageBoxImage.Warning) != MessageBoxResult.OK) return null;
+        }
+        var options = new SpeechOptions(SelectedVoice, Settings.Speed, Settings.Pitch, Settings.SentencePause, Settings.ParagraphPause, Settings.HeadingPause);
+        string? estimate = statistics.Characters == Content.Length ? Format(statistics.EstimatedSeconds(options)) : null;
+        return new(string.IsNullOrWhiteSpace(Title) ? "Leitura" : Title.Trim(), Content, legacySegmentation, options, estimate);
+    }
     private static string FailureMessage(Exception e) => e switch
     {
         OperationCanceledException => "Operação cancelada.",

@@ -45,6 +45,16 @@ public partial class MainWindow : Window
     private void CustomChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
     { if (!ready || changingMode || vm == null) return; changingMode = true; ((Slider)sender).GetBindingExpression(Slider.ValueProperty)?.UpdateSource(); vm.Settings.Mode = "Personalizada"; vm.ApplySettings(); changingMode = false; }
     private void OpenSettings(object sender, RoutedEventArgs e) { if (vm != null) new SettingsWindow(vm) { Owner = this }.ShowDialog(); }
+    private void OpenExport(object sender, RoutedEventArgs e)
+    {
+        if (vm != null && Timeline.IsInteracting)
+        {
+            vm.Status = "Aguarde a conclusão da navegação na barra de leitura antes de exportar.";
+            return;
+        }
+        if (vm?.PrepareExport() is {} document)
+            new ExportWindow(document) { Owner = this }.ShowDialog();
+    }
     private void OpenHelp(object sender, RoutedEventArgs e) => new HelpWindow { Owner = this, ShowActivated = IsActive }.ShowDialog();
     private async void ManageVoices(object sender, RoutedEventArgs e)
     { if (vm == null) return; try { await vm.PrepareVoiceManagementAsync(); new VoiceManager { Owner = this }.ShowDialog(); await vm.ReloadVoicesAsync(); } catch (Exception error) { vm.Status = "Não foi possível abrir os recursos de voz: " + error.Message; } }
