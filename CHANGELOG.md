@@ -2,6 +2,7 @@
 
 ## 2.1.0 — 26/11/2026
 
+- Validação da voz antes de codificar, escolha de voz por exportação, diagnósticos por etapa e ilustração adaptável no painel lateral da biblioteca.
 - Exportação individual do documento aberto em MP3 mono de 96 kbps, com voz Windows ou Piper, pausas, progresso por trechos e cancelamento.
 - Autorização por PIN para documentos protegidos e publicação do arquivo final após a codificação, com proteção contra sobrescrita.
 - [Relatório de validação](docs/releases/2.1.0/RELATORIO-VALIDACAO.md).

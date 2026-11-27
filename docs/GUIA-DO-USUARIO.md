@@ -26,7 +26,8 @@ O pacote é autossuficiente e inclui .NET e SQLite. Para usar pelo código-fonte
 - **Navegar.** Escolha **Pastas e subpastas**. Abra pastas com clique duplo ou Enter, use a árvore lateral ou clique em uma etapa do caminho. O primeiro botão da barra recolhe ou expande a árvore e a raiz fica no topo do painel. Alt+← e Alt+→ percorrem os diretórios visitados na sessão. A pasta e a visualização selecionadas são lembradas entre sessões.
 - **Organizar.** Use **Nova pasta** no diretório atual ou abra o menu de contexto de uma pasta para criar uma subpasta. O menu permite abrir, renomear, mover, copiar e excluir. Arraste pastas ou documentos para outra pasta ou para o caminho clicável. Segure Ctrl durante o arraste para copiar. Uma cópia recebe identidade própria e herda o progresso e a proteção da origem.
 - **Pesquisar e retomar.** Ctrl+F pesquisa nomes de pastas e títulos ou conteúdo de documentos. **Filtros e ordenação** reúne etiqueta, escopo e ordem. Em **Recentes**, aparecem até 30 textos não protegidos acessados ou criados. Textos protegidos continuam acessíveis pela biblioteca após autenticação.
-- **Personalizar.** Em **Opções → Aparência da biblioteca**, alterne lista/grade e ajuste densidade e tamanho dos ícones. Use **Cor da pasta** no menu de contexto. Essas preferências acompanham o perfil local.
+- **Personalizar.** Em **Opções → Aparência da biblioteca**, alterne lista/grade e ajuste densidade e tamanho dos ícones. No menu de contexto de uma pasta, abra **Personalizar pasta** para escolher um ícone, experimentar uma das seis cores ou herdar a cor da pasta pai. A prévia é atualizada antes de salvar. **Restaurar sugestões** volta às escolhas automáticas pelo nome.
+- Uma pasta com cor herdada acompanha a família de cores da nova pasta pai se for movida. Na raiz, usa a cor sugerida até ganhar uma pasta pai. Ícones e cores manuais são mantidos ao renomear ou mover a pasta.
 - **Ler em foco.** Abra um documento e pressione F11 ou escolha **Modo foco**. O texto fica pronto para acompanhar com ou sem áudio. A narração mantém voz, velocidade, volume, pausas e destaque. F11 sai do foco e Ctrl+L volta à biblioteca.
 
 A versão 2.0.0 abre o mesmo banco da 1.3.0. O aplicativo cria uma cópia de segurança ao migrar um banco anterior ao esquema 2. [Procedimento de restauração](MIGRACAO-1.3.0.md).
@@ -58,10 +59,12 @@ Tab/Shift+Tab percorrem os controles; há nomes acessíveis, dicas com atalhos, 
 
 1. Abra o documento e vá para **Leitura**. Encerre uma eventual reprodução com Esc.
 2. Clique em **Exportar áudio**. O diálogo mostra o título, a voz, a qualidade e a duração aproximada quando disponível. Textos protegidos exigem PIN e confirmação.
-3. Clique em **Exportar**, escolha um nome livre em **Salvar como** e aguarde. Use **Cancelar** para interromper a geração.
+3. Se necessário, selecione outra voz para esta exportação ou use **Gerenciar vozes**. Clique em **Exportar**, escolha um nome livre em **Salvar como** e aguarde. Use **Cancelar** para interromper a geração.
 4. Transfira o MP3 para o celular e abra-o em um reprodutor compatível.
 
 O arquivo contém a narração do documento aberto, do início ao fim, em mono de 96 kbps. A exportação usa a voz, a velocidade, o tom quando suportado e as pausas do momento da abertura do diálogo. O volume do player controla a escuta local. O MP3 segue o nível de saída da voz, e o progresso do documento permanece no ponto original.
+
+Em caso de falha, expanda **Detalhes técnicos** para consultar a etapa, o trecho quando aplicável e o código de erro.
 
 O codificador faz parte do Windows Media Foundation. Em edições sem componentes de mídia, a exportação pode exigir o Media Feature Pack. O arquivo final é salvo no destino escolhido. Para abortos forçados do computador, pode restar uma pasta temporária privada com prefixo `.leitor-` no destino. Com a exportação encerrada, remova a pasta incompleta. O MP3 de um texto protegido pode ser ouvido por quem tiver acesso ao arquivo.
 

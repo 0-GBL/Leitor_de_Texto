@@ -6,6 +6,7 @@ using System.Windows.Media;
 using System.Windows.Threading;
 using Leitor.ViewModels;
 using Leitor.Presentation;
+using Leitor.Core;
 
 static partial class Program
 {
@@ -42,7 +43,17 @@ static partial class Program
             AwaitUI(vm.SaveAsync());Check(vm.SelectedFolder!.Count==1&&vm.FolderRows.Single(r=>r.Id==parent).Count==1,"Contador da pasta não atualizou");
             vm.ShowLibraryCommand.Execute(null);
             var panel=(LibraryPanel)window.FindName("Sidebar");var menu=new ContextMenu();typeof(LibraryPanel).GetMethod("BuildMenu",System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.NonPublic)!.Invoke(panel,[menu,true]);
-            Check(menu.Items.OfType<MenuItem>().Count(i=>i.Command!=null)==6 && menu.Items.OfType<MenuItem>().Any(i=>i.HasItems),"Menu de contexto sem comandos ou cores acessíveis");
+            var customize = menu.Items.OfType<MenuItem>().Single(item => Equals(item.Header, "Personalizar pasta…"));
+            Check(menu.Items.OfType<MenuItem>().Count(item => item.Command != null) == 6, "Menu de contexto sem comandos de pasta");
+            answer = AnswerDialog("Personalizar pasta", dialog =>
+            {
+                VisualChildren<ComboBox>(dialog).Single().SelectedIndex = 2;
+                VisualChildren<RadioButton>(dialog).Single(radio => System.Windows.Automation.AutomationProperties.GetName(radio) == "Vermelho suave").IsChecked = true;
+                ClickButton(dialog, "Salvar");
+            });
+            customize.RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
+            PumpUntil(() => vm.LibraryFolders.Single(item => item.Id == child).Appearance == new FolderAppearance("Education", "red"));
+            answer.Stop();
             var column=(ColumnDefinition)panel.FindName("LibraryColumn");column.Width=new GridLength(250);window.UpdateLayout();var splitter=VisualChildren<GridSplitter>(window).Single();splitter.RaiseEvent(new DragCompletedEventArgs(0,0,false){RoutedEvent=Thumb.DragCompletedEvent});Check(Math.Abs(new Leitor.Services.SettingsStore(directory).Load().LibraryWidth-250)<2,"Largura não persistiu");
             vm.FolderContext=true;answer=AnswerDialog("Mover para pasta",w=>{VisualChildren<ListBox>(w).First().SelectedIndex=0;ClickButton(w,"Mover");});vm.MoveItemCommand.Execute(null);PumpUntil(()=>vm.MoveItemCommand.CanExecute(null)&&vm.LibraryFolders.Single(f=>f.Id==child).ParentId==null);answer.Stop();
             answer=AnswerDialog("Excluir pasta",w=>{Check(VisualChildren<Button>(w).Count(b=>b.Content is string)>=3,"Opções de exclusão ausentes");ClickButton(w,"Cancelar");});vm.DeleteFolderCommand.Execute(null);PumpUntil(()=>vm.DeleteFolderCommand.CanExecute(null));answer.Stop();Check(vm.LibraryFolders.Any(f=>f.Id==child),"Cancelar excluiu a pasta");
@@ -60,10 +71,18 @@ static partial class Program
         string directory = System.IO.Path.Combine(root, "explorer-ui");
         using var vault = new Leitor.Services.Vault(directory);
         var store = new Leitor.Services.LibraryStore(directory, vault);
-        string folder = store.CreateFolder("Faculdade"), child = store.CreateFolder("Módulo 01", folder);
+        string folder = store.CreateFolder("Fundamentos da Programação"), child = store.CreateFolder("Módulo 01", folder);
+        string education = store.CreateFolder("Faculdade");
+        string period = store.CreateFolder("5º Período", education);
+        string data = store.CreateFolder("Tópicos de Big Data e Armazenamento", period);
+        store.SaveFolderAppearance(education, new(Color: "green"));
+        store.SaveFolderAppearance(period, new(Color: FolderAppearance.Inherit));
+        store.SaveFolderAppearance(data, new(Color: FolderAppearance.Inherit));
+        store.SaveFolderAppearance(child, new(Color: FolderAppearance.Inherit));
         var document = new Leitor.Core.Document { Title = "Banco de Dados", Content = "Estruturas armazenam os dados. Índices aceleram buscas. Transações controlam alterações.", FolderId = child };
         store.Save(document);
-        store.CreateFolder("Formação Full Stack");
+        for (int lesson = 1; lesson <= 7; lesson++)
+            store.Save(new() { Title = $"Aula {lesson:00}", Content = "Exemplo para validação visual.", FolderId = child });
         store.CreateFolder("Idiomas");
         const string longFolder = "Materiais de arquitetura e fundamentos de sistemas distribuídos";
         store.CreateFolder(longFolder);
@@ -76,16 +95,22 @@ static partial class Program
             AwaitUI(vm.InitializeAsync());
             var panel = (LibraryPanel)window.FindName("Sidebar");
             var entryList = (ListBox)panel.FindName("LibraryList");
+            vm.ToggleFolder(education, true);
+            vm.ToggleFolder(period, true);
+            Check(vm.FolderRows.Single(row => row.Id == data).Visual == new FolderVisual("Database", "green", 2),
+                "A árvore não mostrou a herança em dois níveis");
+            AwaitUI(vm.CustomizeFolderAsync(education, new(Color: "orange")));
+            Check(vm.FolderRows.Single(row => row.Id == data).Visual.Color == "orange", "Alterar a cor pai não atualizou a árvore");
+            AwaitUI(vm.CustomizeFolderAsync(education, new(Color: "green")));
             vm.SelectedEntry = vm.Entries.Single(entry => entry.Id == folder);
-            vm.ColorSelectedFolder("#3D865F");
             vm.ActivateEntryCommand.Execute(null);
             vm.NavigateFolder(child);
-            Check(vm.Breadcrumbs.Select(crumb => crumb.Name).SequenceEqual(["Biblioteca", "Faculdade", "Módulo 01"]), "Caminho clicável divergiu");
+            Check(vm.Breadcrumbs.Select(crumb => crumb.Name).SequenceEqual(["Biblioteca", "Fundamentos da Programação", "Módulo 01"]), "Caminho clicável divergiu");
             vm.NavigateBackCommand.Execute(null);
             Check(vm.SelectedFolder?.Id == folder, "Voltar perdeu a pasta");
             vm.NavigateForwardCommand.Execute(null);
             Check(vm.SelectedFolder?.Id == child, "Avançar perdeu a subpasta");
-            vm.Search = "faculdade";
+            vm.Search = "programação";
             PumpUntil(() => !vm.LibraryBusy && vm.Entries.Any(entry => entry.Id == folder));
             vm.NavigateFolder(null);
             PumpUntil(() => !vm.LibraryBusy);
@@ -100,6 +125,7 @@ static partial class Program
             Check(wideColumns >= 3, "A grade ampla não distribuiu as colunas");
             Check(VisualChildren<TextBlock>(entryList).Any(t=>t.Text==longFolder && t.TextWrapping==TextWrapping.Wrap && t.ActualHeight>=40), "Nome extenso não quebrou em linhas");
             CaptureExplorerWindow(window, "biblioteca-clara");
+            CaptureExplorerWindow(window, "personalizacao-clara");
             vm.LibraryDensity = "Ampla";
             vm.LibraryIconSize = 32;
             vm.ToggleThemeCommand.Execute(null);
@@ -111,6 +137,14 @@ static partial class Program
             var second = (ListBoxItem)entryList.ItemContainerGenerator.ContainerFromIndex(1);
             Check(first.TranslatePoint(new(), narrowGrid).Y == second.TranslatePoint(new(), narrowGrid).Y, "A barra de rolagem eliminou uma coluna da grade");
             CaptureExplorerWindow(window, "biblioteca-escura");
+            var illustration = (Border)panel.FindName("StudyIllustration");
+            var studySidebar = (Border)panel.FindName("FolderSidebar");
+            Check(illustration.IsVisible && !illustration.IsHitTestVisible, "Ilustração indisponível ou interceptando ponteiro");
+            studySidebar.Height = 380;
+            window.UpdateLayout();
+            Check(!illustration.IsVisible, "Ilustração deve ceder espaço à navegação");
+            studySidebar.ClearValue(FrameworkElement.HeightProperty);
+            window.UpdateLayout();
             var toggle = (Button)panel.FindName("SidebarToggle");
             double sidebarWidth = ((ColumnDefinition)panel.FindName("LibraryColumn")).ActualWidth;
             toggle.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
@@ -123,6 +157,37 @@ static partial class Program
 
             vm.NavigateFolder(child);
             PumpUntil(() => !vm.LibraryBusy && vm.Entries.Any(entry => entry.Id == document.Id));
+            window.Width = 1448;
+            window.Height = 1000;
+            ((ColumnDefinition)panel.FindName("LibraryColumn")).Width = new GridLength(500);
+            vm.LibraryGrid = false;
+            window.UpdateLayout();
+            CaptureExplorerWindow(window, "biblioteca-escura-estudos");
+            CaptureExplorerWindow(window, "personalizacao-escura");
+            var target = vm.LibraryFolders.Single(item => item.Id == period);
+            var dialog = new FolderAppearanceDialog(target, vm.ParentFolderVisual(target), vm.Settings.Dark);
+            Exception? dialogError = null;
+            var dismiss = AnswerDialog("Personalizar pasta", appearanceWindow =>
+            {
+                try
+                {
+                    appearanceWindow.UpdateLayout();
+                    CaptureExplorerWindow(appearanceWindow, "personalizar-pasta");
+                    var radios = VisualChildren<RadioButton>(appearanceWindow).ToList();
+                    Check(radios.Count == 8, "Esperava seis cores e dois modos automáticos");
+                    radios.Single(radio => System.Windows.Automation.AutomationProperties.GetName(radio) == "Azul").IsChecked = true;
+                    Check(dialog.Appearance.Color == "blue", "A prévia não aplicou a cor selecionada");
+                    ClickButton(appearanceWindow, "Restaurar sugestões");
+                    Check(dialog.Appearance == FolderAppearance.Suggested, "Restaurar não zerou a personalização");
+                }
+                catch (Exception error) { dialogError = error; }
+                finally { appearanceWindow.DialogResult = false; }
+            });
+            try { Check(dialog.Window.ShowDialog() == false, "Cancelar confirmou o diálogo"); }
+            finally { dismiss.Stop(); }
+            if (dialogError != null) throw new InvalidOperationException("Falha no diálogo de personalização.", dialogError);
+            Check(store.Folders().Single(item => item.Id == period).Appearance.Color == FolderAppearance.Inherit,
+                "Cancelar alterou a personalização salva");
             vm.SelectedEntry = vm.Entries.Single(entry => entry.Id == document.Id);
             vm.ActivateEntryCommand.Execute(null);
             PumpUntil(() => vm.ActivateEntryCommand.CanExecute(null) && vm.ReadingVisible);

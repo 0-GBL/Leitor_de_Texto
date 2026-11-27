@@ -1,9 +1,21 @@
 using System.IO;
+using System.Diagnostics;
+using System.Text.Json;
 using Leitor.Core;
 using NAudio.Wave;
 using NAudio.Wave.SampleProviders;
 
 namespace Leitor.Services;
+
+public enum ExportStage { VoiceMissing, Model, Initialization, Synthesis, Pcm, Encoder, Destination }
+
+public sealed class Mp3ExportException(ExportStage stage, string message, Exception? cause = null, int? segment = null)
+    : IOException(message, cause)
+{
+    public ExportStage Stage { get; } = stage;
+    public int? SegmentNumber { get; } = segment;
+    public string Diagnostic => $"{Stage} · trecho {SegmentNumber?.ToString() ?? "—"} · HRESULT 0x{(InnerException?.HResult ?? HResult):X8}";
+}
 
 public static class Mp3Export
 {
@@ -32,9 +44,76 @@ public static class Mp3Export
         IProgress<int> progress, CancellationToken token) =>
         Task.Run(() =>
         {
+            ValidateVoice(options.Voice);
             using var piper = options.Voice?.Engine == "Piper" ? new PiperSpeechEngine() : null;
-            Export(text, legacy, options, destination, (ISpeechEngine?)piper ?? new WindowsSpeechEngine(), progress, token);
+            try { Export(text, legacy, options, destination, (ISpeechEngine?)piper ?? new WindowsSpeechEngine(), progress, token); }
+            catch (Mp3ExportException error) when (!token.IsCancellationRequested &&
+                error.Stage is ExportStage.Model or ExportStage.Initialization or ExportStage.Synthesis)
+            {
+                RecordSynthesisFailure(error, options, legacy);
+                throw;
+            }
         }, token);
+
+    private static void RecordSynthesisFailure(Mp3ExportException error, SpeechOptions options, bool legacy)
+    {
+        try
+        {
+            var piper = error.InnerException as PiperFailure;
+            var exceptions = new List<object>();
+            for (Exception? cause = error; cause != null; cause = cause.InnerException)
+            {
+                exceptions.Add(new
+                {
+                    Type = cause.GetType().FullName,
+                    HResult = $"0x{cause.HResult:X8}",
+                    Message = cause is Mp3ExportException or PiperFailure ? cause.Message : null,
+                    Frames = new StackTrace(cause, false).GetFrames().Select(frame =>
+                    {
+                        var method = frame.GetMethod();
+                        return $"{method?.DeclaringType?.FullName}.{method?.Name}";
+                    })
+                });
+            }
+            string directory = Path.Combine(AppPaths.Root, "diagnostics");
+            AtomicFiles.EnsurePrivateDirectory(directory);
+            AtomicFiles.Write(Path.Combine(directory, "mp3-synthesis.json"), JsonSerializer.SerializeToUtf8Bytes(new
+            {
+                Utc = DateTime.UtcNow,
+                Stage = error.Stage.ToString(),
+                Segment = error.SegmentNumber,
+                Engine = options.Voice?.Engine ?? "Windows",
+                Voice = options.Voice?.Id,
+                options.Speed,
+                LegacySegmentation = legacy,
+                Exceptions = exceptions,
+                Worker = piper == null ? null : new { piper.Operation, piper.WorkerType, piper.WorkerMessage, piper.WorkerFrames }
+            }, new JsonSerializerOptions { WriteIndented = true }));
+        }
+        catch (Exception failure) when (failure is IOException or UnauthorizedAccessException or System.Security.SecurityException)
+        {
+            Trace.TraceWarning("Falha ao salvar o diagnóstico local de síntese MP3. HRESULT 0x{0:X8}", failure.HResult);
+        }
+    }
+
+    internal static void ValidateVoice(Voice? voice)
+    {
+        if (voice?.Engine == "Piper")
+        {
+            if (voice.Model == null || !File.Exists(voice.Model) || !File.Exists(voice.Model + ".json"))
+                throw new Mp3ExportException(ExportStage.VoiceMissing, $"A voz {voice.Name} está sem o modelo ou a configuração. Reinstale-a em Vozes offline ou selecione outra voz.");
+            if (!PiperSpeechEngine.Installed)
+                throw new Mp3ExportException(ExportStage.Initialization, "Os recursos de execução do Piper estão incompletos. Repare o Piper em Vozes offline.");
+        }
+        else if (voice != null)
+        {
+            List<Voice> installed;
+            try { installed = WindowsSpeechEngine.Voices(); }
+            catch (Exception e) { throw new Mp3ExportException(ExportStage.Initialization, "Não foi possível consultar as vozes do Windows.", e); }
+            if (!installed.Any(item => item.Id == voice.Id))
+                throw new Mp3ExportException(ExportStage.VoiceMissing, $"A voz {voice.Name} não está instalada ou habilitada no Windows.");
+        }
+    }
 
     internal static void Export(string text, bool legacy, SpeechOptions options, string destination,
         ISpeechEngine engine, IProgress<int> progress, CancellationToken token)
@@ -53,7 +132,17 @@ public static class Mp3Export
         {
             AtomicFiles.EnsurePrivateDirectory(scratch);
             using (var provider = new Narration(segments, options, engine, progress, token))
-                MediaFoundationEncoder.EncodeToMp3(provider, partial, BitRate);
+            {
+                // Check the selected engine with the first real segment before starting the encoder.
+                provider.Prime();
+                try { MediaFoundationEncoder.EncodeToMp3(provider, partial, BitRate); }
+                catch (Exception) when (token.IsCancellationRequested) { token.ThrowIfCancellationRequested(); throw; }
+                catch (Exception e) when (e is not Mp3ExportException && e is not IOException && e is not UnauthorizedAccessException)
+                {
+                    if (IsStorageError(e)) throw new Mp3ExportException(ExportStage.Destination, StorageMessage(e), e);
+                    throw new Mp3ExportException(ExportStage.Encoder, "O codificador MP3 do Windows falhou. Confira os componentes de mídia deste Windows.", e);
+                }
+            }
             token.ThrowIfCancellationRequested();
             if (new FileInfo(partial).Length == 0) throw new IOException("O codificador não gerou áudio.");
             File.Move(partial, finalPath);
@@ -69,6 +158,17 @@ public static class Mp3Export
         }
     }
 
+    internal static bool IsStorageError(Exception e) => (uint)e.HResult is 0x80070070 or 0x80070027 or 0x80070005 or 0x80030070 or 0x80070003 or 0x8007007B or 0x800700CE;
+
+    internal static string StorageMessage(Exception e) => (uint)e.HResult switch
+    {
+        0x80070070 or 0x80070027 or 0x80030070 => "Falta espaço livre para concluir o MP3.",
+        0x80070005 => "A conta atual não tem permissão para gravar no destino.",
+        0x800700CE => "O caminho é longo demais. Escolha uma pasta ou nome mais curto.",
+        0x80070003 or 0x8007007B => "O caminho de destino está inválido ou indisponível.",
+        _ => "Não foi possível gravar no destino escolhido."
+    };
+
     private sealed class Narration(IReadOnlyList<Segment> segments, SpeechOptions options, ISpeechEngine engine,
         IProgress<int> progress, CancellationToken token) : IWaveProvider, IDisposable
     {
@@ -76,6 +176,8 @@ public static class Mp3Export
         private int segment, silence, reported = -1;
         private IWaveProvider? audio;
         private WaveFileReader? reader;
+
+        public void Prime() => LoadSegment();
 
         public int Read(byte[] buffer, int offset, int count)
         {
@@ -85,7 +187,9 @@ public static class Mp3Export
                 token.ThrowIfCancellationRequested();
                 if (audio != null)
                 {
-                    int read = audio.Read(buffer, offset + written, count - written);
+                    int read;
+                    try { read = audio.Read(buffer, offset + written, count - written); }
+                    catch (Exception e) { throw PcmFailure(e); }
                     written += read;
                     if (read > 0) continue;
                     Dispose();
@@ -107,16 +211,44 @@ public static class Mp3Export
                     progress.Report(percent);
                 }
                 if (segment == segments.Count) break;
-                var bytes = engine.GenerateAsync(segments[segment].Text, options, token).GetAwaiter().GetResult();
+                LoadSegment();
+            }
+            return written;
+        }
+
+        private void LoadSegment()
+        {
+            token.ThrowIfCancellationRequested();
+            byte[] bytes;
+            try { bytes = engine.GenerateAsync(segments[segment].Text, options, token).GetAwaiter().GetResult(); }
+            catch (Exception) when (token.IsCancellationRequested) { token.ThrowIfCancellationRequested(); throw; }
+            catch (PiperFailure e) when (e.Model)
+            {
+                throw new Mp3ExportException(ExportStage.Model, "O Piper não conseguiu carregar o modelo selecionado. Repare ou reinstale essa voz.", e, segment + 1);
+            }
+            catch (PiperFailure e) when (e.Initialization)
+            {
+                throw new Mp3ExportException(ExportStage.Initialization, "O Piper foi iniciado, mas não respondeu. Repare o runtime em Vozes offline.", e, segment + 1);
+            }
+            catch (Exception e)
+            {
+                throw new Mp3ExportException(ExportStage.Synthesis, $"A voz selecionada falhou ao sintetizar o trecho {segment + 1}.", e, segment + 1);
+            }
+            try
+            {
                 reader = new WaveFileReader(new MemoryStream(bytes));
+                if (reader.Length == 0) throw new InvalidDataException();
                 ISampleProvider samples = reader.ToSampleProvider();
                 if (samples.WaveFormat.Channels == 2) samples = new StereoToMonoSampleProvider(samples);
                 if (samples.WaveFormat.Channels != 1) throw new InvalidDataException("O motor retornou áudio com canais incompatíveis.");
                 if (samples.WaveFormat.SampleRate != SampleRate) samples = new WdlResamplingSampleProvider(samples, SampleRate);
                 audio = new SampleToWaveProvider16(samples);
             }
-            return written;
+            catch (Exception e) { throw PcmFailure(e); }
         }
+
+        private Mp3ExportException PcmFailure(Exception cause) =>
+            new(ExportStage.Pcm, $"A voz retornou áudio em formato incompatível no trecho {segment + 1}.", cause, segment + 1);
 
         public void Dispose()
         {

@@ -155,7 +155,7 @@ public sealed partial class MainViewModel : Observable, IDisposable
         string? estimate = statistics.Characters == Content.Length ? Format(statistics.EstimatedSeconds(options)) : null;
         return new(string.IsNullOrWhiteSpace(Title) ? "Leitura" : Title.Trim(), Content, legacySegmentation, options, estimate);
     }
-    private static string FailureMessage(Exception e) => e switch
+    internal static string FailureMessage(Exception e) => e switch
     {
         OperationCanceledException => "Operação cancelada.",
         IOException or UnauthorizedAccessException or Microsoft.Data.Sqlite.SqliteException => "Não foi possível gravar os dados. Verifique o espaço livre e a permissão da pasta e tente salvar novamente. O texto permanece no editor.",

@@ -5,7 +5,7 @@ using Leitor.Services;
 namespace Leitor.Presentation;
 public static class OrganizationDialogs
 {
-    private static Window Window(string title,double height=260)
+    internal static Window Window(string title,double height=260)
     {
         var owner=Application.Current.Windows.OfType<Window>().FirstOrDefault(x=>x.IsActive)??Application.Current.Windows.OfType<Leitor.MainWindow>().FirstOrDefault(x=>x.IsVisible);
         var w=new Window{Title=title,Width=520,Height=height,MinWidth=400,WindowStartupLocation=WindowStartupLocation.CenterOwner,Owner=owner,ShowActivated=owner?.IsActive??true,FontFamily=new("Segoe UI"),FontSize=14};if(owner!=null&&!owner.IsActive){w.WindowStartupLocation=WindowStartupLocation.Manual;w.Left=owner.Left;w.Top=owner.Top;}w.SetResourceReference(System.Windows.Window.BackgroundProperty,"BackgroundBrush");w.SetResourceReference(System.Windows.Window.ForegroundProperty,"TextBrush");w.PreviewKeyDown+=(_,e)=>{if(e.Key==System.Windows.Input.Key.Escape){e.Handled=true;w.Close();}};return w;

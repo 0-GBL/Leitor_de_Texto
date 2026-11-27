@@ -9,6 +9,18 @@ using Leitor.Core;
 
 namespace Leitor.Services;
 
+internal sealed class PiperFailure(string operation, string message, bool model = false, bool initialization = false,
+    string? workerType = null, string? workerMessage = null, string[]? workerFrames = null, Exception? cause = null)
+    : InvalidOperationException(message, cause)
+{
+    public string Operation { get; } = operation;
+    public string? WorkerType { get; } = workerType;
+    public string? WorkerMessage { get; } = workerMessage;
+    public string[]? WorkerFrames { get; } = workerFrames;
+    public bool Model { get; } = model;
+    public bool Initialization { get; } = initialization;
+}
+
 public interface ISpeechEngine
 {
     Task<byte[]> GenerateAsync(string text, SpeechOptions options, CancellationToken token);
@@ -47,6 +59,7 @@ public sealed class WindowsSpeechEngine : ISpeechEngine
 public sealed class PiperSpeechEngine : ISpeechEngine, IDisposable
 {
     private Process? worker;
+    private bool workerAnswered;
     private readonly SemaphoreSlim gate = new(1, 1);
     public static bool Installed => File.Exists(Path.Combine(AppPaths.Runtime, "python.exe")) && File.Exists(Path.Combine(AppPaths.Runtime, "ready"));
     public static List<Voice> Voices()
@@ -65,7 +78,8 @@ public sealed class PiperSpeechEngine : ISpeechEngine, IDisposable
         info.ArgumentList.Add("-u"); info.ArgumentList.Add(Path.Combine(AppContext.BaseDirectory, "runtime", "piper_worker.py"));
         info.Environment["PYTHONNOUSERSITE"] = "1";
         info.Environment["HF_HUB_OFFLINE"] = "1";
-        worker = Process.Start(info) ?? throw new InvalidOperationException("Não foi possível iniciar o Piper.");
+        worker = Process.Start(info) ?? throw new PiperFailure("start-worker", "O processo Piper não foi criado.", initialization: true);
+        workerAnswered = false;
         // Drain stderr to prevent native runtime diagnostics from blocking the pipe. No text logs are kept.
         worker.ErrorDataReceived += (_, _) => { }; worker.BeginErrorReadLine();
     }
@@ -74,14 +88,42 @@ public sealed class PiperSpeechEngine : ISpeechEngine, IDisposable
         await gate.WaitAsync(token);
         try
         {
-            Start(); var current = worker!;
-            using var cancel = token.Register(() => { try { if (!current.HasExited) current.Kill(true); } catch (InvalidOperationException) { } });
-            await current.StandardInput.WriteLineAsync(JsonSerializer.Serialize(new { text, model = options.Voice!.Model, speed = options.Speed }));
-            var line = await current.StandardOutput.ReadLineAsync(token);
+            try { Start(); }
+            catch (System.ComponentModel.Win32Exception error)
+            {
+                throw new PiperFailure("start-worker", "O Windows não iniciou o processo Piper.", initialization: true, cause: error);
+            }
+            var current = worker!;
+            bool starting = !workerAnswered;
+            using var cancel = token.Register(() => { try { if (!current.HasExited) current.Kill(true); } catch (InvalidOperationException) { } catch (System.ComponentModel.Win32Exception) { } });
+            string? line;
+            string operation = "write-request";
+            try
+            {
+                await current.StandardInput.WriteLineAsync(JsonSerializer.Serialize(new { text, model = options.Voice!.Model, speed = options.Speed }).AsMemory(), token);
+                operation = "read-response";
+                line = await current.StandardOutput.ReadLineAsync(token);
+            }
+            catch (IOException error)
+            {
+                token.ThrowIfCancellationRequested();
+                throw new PiperFailure(operation, "O canal de comunicação com o Piper falhou.", initialization: starting, cause: error);
+            }
             token.ThrowIfCancellationRequested();
-            if (line == null) throw new InvalidOperationException("O processo Piper foi encerrado. Reinstale os recursos de voz.");
+            if (line == null)
+                throw new PiperFailure(operation, "O canal de saída do Piper foi fechado antes da resposta.", initialization: starting);
+            workerAnswered = true;
             using var json = JsonDocument.Parse(line);
-            if (json.RootElement.TryGetProperty("error", out var error)) throw new InvalidOperationException("Piper: " + error.GetString());
+            if (json.RootElement.TryGetProperty("error", out var failure))
+            {
+                var response = json.RootElement;
+                string? Field(string name) => response.TryGetProperty(name, out var value) ? value.GetString() : null;
+                string[]? frames = response.TryGetProperty("frames", out var trace)
+                    ? trace.EnumerateArray().Select(frame => frame.GetString()!).ToArray() : null;
+                bool modelError = failure.GetString() == "model";
+                throw new PiperFailure(failure.GetString() ?? "worker", "O worker Piper retornou uma falha.",
+                    model: modelError, workerType: Field("type"), workerMessage: Field("message"), workerFrames: frames);
+            }
             return Convert.FromBase64String(json.RootElement.GetProperty("audio").GetString()!);
         }
         finally { gate.Release(); }

@@ -9,6 +9,7 @@
     <InternalsVisibleTo Include="Leitor.Tests"/>
     <Compile Include="../../shared/SafeArchive.cs" Link="Security/SafeArchive.cs"/>
     <Resource Include="Assets/Leitor.ico"/>
+    <Resource Include="Assets/StudyRoom.jpg"/>
     <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.15"/>
     <PackageReference Include="System.Speech" Version="10.0.0"/>
     <PackageReference Include="NAudio.WinMM" Version="2.2.1"/>

@@ -5,7 +5,10 @@ using Leitor.Core;
 using Microsoft.Data.Sqlite;
 
 namespace Leitor.Services;
-public sealed record LibraryFolder(string Id,string Name,string? ParentId,DateTime Created,DateTime Modified);
+public sealed record LibraryFolder(string Id,string Name,string? ParentId,DateTime Created,DateTime Modified)
+{
+    public FolderAppearance Appearance { get; init; } = FolderAppearance.Suggested;
+}
 public sealed record LibraryQuery(string Search="",string Tag="",string View="Todos os textos",string? FolderId=null,string Scope="Toda a biblioteca",string Sort="Modificação · recentes",int Page=0,int PageSize=100,bool DirectFolder=false,IReadOnlyList<string>? RecentIds=null);
 public sealed record LibraryPage(IReadOnlyList<Document> Items,int Total);
 public sealed record FolderImpact(int Documents,int Subfolders);
@@ -23,10 +26,12 @@ public sealed partial class LibraryStore
             if(!acquired) throw new IOException("A biblioteca está sendo atualizada por outra instância.");
             using var db=Connect(); using var cmd=db.CreateCommand(); cmd.CommandText="PRAGMA user_version"; long version=(long)cmd.ExecuteScalar()!;
             if(version>2) throw new InvalidOperationException("Biblioteca criada por versão mais recente.");
-            if(version==2) return;
+            cmd.CommandText = "SELECT 1 FROM sqlite_master WHERE type='table' AND name='folder_appearance'";
+            if(version==2 && cmd.ExecuteScalar() != null) return;
             if(existed)
             {
-                string backup=Path.Combine(directory,"backups","pre-1.3.0-"+DateTime.UtcNow.ToString("yyyyMMddHHmmssfff")+"-"+Guid.NewGuid().ToString("N"));
+                string prefix = version == 2 ? "pre-folder-appearance-" : "pre-1.3.0-";
+                string backup=Path.Combine(directory,"backups",prefix+DateTime.UtcNow.ToString("yyyyMMddHHmmssfff")+"-"+Guid.NewGuid().ToString("N"));
                 AtomicFiles.EnsurePrivateDirectory(backup);
                 byte[]? keyBefore=File.Exists(Path.Combine(directory,"vault.json"))?File.ReadAllBytes(Path.Combine(directory,"vault.json")):null;
                 if(keyBefore!=null)AtomicFiles.Write(Path.Combine(backup,"vault.json"),keyBefore);
@@ -37,7 +42,9 @@ public sealed partial class LibraryStore
                 MigrationBackup=backup;
             }
             using var tx=db.BeginTransaction(); cmd.Transaction=tx;
-            cmd.CommandText="""
+            if (version < 2)
+            {
+                cmd.CommandText="""
                 CREATE TABLE IF NOT EXISTS documents(id TEXT PRIMARY KEY,protected INTEGER NOT NULL,payload BLOB NOT NULL);
                 CREATE TABLE folders(id TEXT PRIMARY KEY,name TEXT NOT NULL,parent TEXT REFERENCES folders(id) ON DELETE CASCADE,created TEXT NOT NULL,modified TEXT NOT NULL);
                 CREATE INDEX documents_protection ON documents(protected,id);
@@ -58,7 +65,10 @@ public sealed partial class LibraryStore
                   CASE WHEN protected=1 OR json_valid(payload) THEN 1 ELSE 0 END FROM documents;
                 PRAGMA user_version=2;
                 """;
-            cmd.ExecuteNonQuery(); tx.Commit();
+                cmd.ExecuteNonQuery();
+            }
+            MigrateFolderAppearance(db, tx, directory);
+            tx.Commit();
         }
         finally{if(acquired)mutex.ReleaseMutex();}
     }
@@ -115,7 +125,24 @@ public sealed partial class LibraryStore
     public bool HasProtected {get{using var db=Connect();using var c=db.CreateCommand();c.CommandText="SELECT EXISTS(SELECT 1 FROM documents WHERE protected=1)";return (long)c.ExecuteScalar()!!=0;}}
     public List<LibraryFolder> Folders()
     {
-        using var db=Connect();using var c=db.CreateCommand();c.CommandText="SELECT id,name,parent,created,modified FROM folders ORDER BY name COLLATE NOCASE";using var r=c.ExecuteReader();var list=new List<LibraryFolder>();while(r.Read())list.Add(new(r.GetString(0),r.GetString(1),r.IsDBNull(2)?null:r.GetString(2),CatalogDate(r.GetString(3)),CatalogDate(r.GetString(4))));return list.OrderBy(x=>x.Name,StringComparer.CurrentCultureIgnoreCase).ToList();
+        using var db = Connect();
+        using var command = db.CreateCommand();
+        command.CommandText = """
+            SELECT f.id,f.name,f.parent,f.created,f.modified,a.icon,a.color
+            FROM folders f LEFT JOIN folder_appearance a ON a.folder=f.id
+            ORDER BY f.name COLLATE NOCASE
+            """;
+        using var rows = command.ExecuteReader();
+        var list = new List<LibraryFolder>();
+        while (rows.Read())
+        {
+            string? Optional(int column) => rows.IsDBNull(column) ? null : rows.GetString(column);
+            list.Add(new(rows.GetString(0), rows.GetString(1), Optional(2), CatalogDate(rows.GetString(3)), CatalogDate(rows.GetString(4)))
+            {
+                Appearance = new(Optional(5), Optional(6))
+            });
+        }
+        return list.OrderBy(folder => folder.Name, StringComparer.CurrentCultureIgnoreCase).ToList();
     }
     public static HashSet<string> Descendants(IReadOnlyList<LibraryFolder> folders,string id)
     {
@@ -215,7 +242,10 @@ public sealed partial class LibraryStore
         while (pending.TryPop(out var folder))
         {
             string? parent = folder.Id == id ? destination : copies[folder.ParentId!];
-            copies.Add(folder.Id, InsertFolder(db, tx, folder.Name, parent));
+            string target = InsertFolder(db, tx, folder.Name, parent);
+            copies.Add(folder.Id, target);
+            if (folder.Appearance != FolderAppearance.Suggested)
+                WriteFolderAppearance(db, tx, target, folder.Appearance);
             foreach (var child in children[folder.Id]) pending.Push(child);
         }
 

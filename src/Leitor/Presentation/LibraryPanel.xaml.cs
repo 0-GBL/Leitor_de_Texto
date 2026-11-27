@@ -39,6 +39,22 @@ public partial class LibraryPanel : UserControl
         LibraryColumn.MaxWidth = maximum;
         LibraryColumn.Width = new(collapsed ? 0 : Math.Clamp(Model?.Settings.LibraryWidth ?? 280, 200, maximum));
     }
+    private void SidebarSizeChanged(object sender, SizeChangedEventArgs e)
+    {
+        if (StudyIllustration == null || StudyHeader == null) return;
+        double width = e.NewSize.Width;
+        double height = e.NewSize.Height;
+        bool showHeader = width >= 220 && height >= 345;
+        StudyHeader.Height = Math.Clamp(width * .37, 90, 166);
+        StudyIllustration.Height = Math.Clamp(width * .34, 86, 160);
+        StudyHeader.Visibility = StudySubtitle.Visibility = showHeader ? Visibility.Visible : Visibility.Collapsed;
+        StudyIllustration.Visibility = width >= 220 && height >= 465 ? Visibility.Visible : Visibility.Collapsed;
+        SidebarHome.HorizontalAlignment = showHeader ? HorizontalAlignment.Right : HorizontalAlignment.Center;
+        if (showHeader)
+            SidebarHome.Foreground = Brushes.WhiteSmoke;
+        else
+            SidebarHome.SetResourceReference(Control.ForegroundProperty, "TextBrush");
+    }
     private void ToggleSidebar(object sender, RoutedEventArgs e)
     {
         if (Model is not {} vm) return;
@@ -146,14 +162,16 @@ public partial class LibraryPanel : UserControl
         Add("Copiar para…", vm.CopyItemCommand);
         if (folder)
         {
-            var colors = new MenuItem { Header = "Cor da pasta" };
-            foreach (var (name, color) in FolderColorConverter.Choices)
+            var customize = new MenuItem { Header = "Personalizar pasta…" };
+            customize.Click += async (_, _) =>
             {
-                var choice = new MenuItem { Header = name };
-                choice.Click += (_, _) => vm.ColorSelectedFolder(color);
-                colors.Items.Add(choice);
-            }
-            menu.Items.Add(colors);
+                if (vm.FolderToCustomize is not {} target) return;
+                var dialog = new FolderAppearanceDialog(target, vm.ParentFolderVisual(target), vm.Settings.Dark);
+                if (dialog.Window.ShowDialog() != true) return;
+                try { await vm.CustomizeFolderAsync(target.Id, dialog.Appearance); }
+                catch (Exception error) { vm.Status = MainViewModel.FailureMessage(error); }
+            };
+            menu.Items.Add(customize);
         }
         Add(folder ? "Excluir pasta…" : "Excluir documento…", folder ? vm.DeleteFolderCommand : vm.DeleteCommand);
     }
@@ -235,24 +253,6 @@ public partial class LibraryPanel : UserControl
         try { await vm.MoveLibraryItemAsync(item.Id, item.Folder, destination, CopyRequested(e)); }
         catch (Exception error) { vm.Status = error.Message; }
     }
-}
-
-public sealed class FolderColorConverter : IValueConverter
-{
-    internal static (string Name, string? Color)[] Choices { get; } =
-        [("Padrão", null), ("Âmbar", "#A77220"), ("Verde", "#3D865F"), ("Azul", "#477FB7"), ("Violeta", "#9272AA")];
-    private static readonly Dictionary<string, Brush> BrushesByColor = Choices
-        .Where(choice => choice.Color != null)
-        .ToDictionary(choice => choice.Color!, choice =>
-        {
-            var brush = new SolidColorBrush((Color)ColorConverter.ConvertFromString(choice.Color!)!);
-            brush.Freeze();
-            return (Brush)brush;
-        });
-
-    public object Convert(object value, Type targetType, object parameter, CultureInfo culture) =>
-        value is string color && BrushesByColor.TryGetValue(color, out var brush) ? brush : DependencyProperty.UnsetValue;
-    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) => Binding.DoNothing;
 }
 
 public sealed class LibraryTileWidth : IValueConverter

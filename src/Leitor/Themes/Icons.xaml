@@ -26,6 +26,11 @@
  <Geometry x:Key="IconTrash">M4,6 L20,6 M9,6 L9,3 L15,3 L15,6 M6,6 L7,21 L17,21 L18,6 M10,10 L10,17 M14,10 L14,17</Geometry>
  <Geometry x:Key="IconFolder">M3,5 L10,5 L12,8 L21,8 L21,21 L3,21 Z</Geometry>
  <Geometry x:Key="IconLibraryFolder">M2,7 Q2,5 4,5 H9 L12,8 H20 Q22,8 22,10 V18 Q22,20 20,20 H4 Q2,20 2,18 Z</Geometry>
+ <Geometry x:Key="IconEducation">M2,9 L12,4 22,9 12,14 Z M6,11 L6,17 Q12,22 18,17 L18,11 M22,9 V16</Geometry>
+ <Geometry x:Key="IconCalendar">M5,5 H19 Q21,5 21,7 V19 Q21,21 19,21 H5 Q3,21 3,19 V7 Q3,5 5,5 Z M3,10 H21 M8,3 V7 M16,3 V7 M8,14 H10 M14,14 H16 M8,17 H10</Geometry>
+ <Geometry x:Key="IconProgramming">M8,7 L3,12 8,17 M16,7 L21,12 16,17 M14,4 L10,20</Geometry>
+ <Geometry x:Key="IconDatabase">M4,6 A8,3 0 1 0 20,6 A8,3 0 1 0 4,6 Z M4,6 V18 A8,3 0 0 0 20,18 V6 M4,12 A8,3 0 0 0 20,12</Geometry>
+ <Geometry x:Key="IconLayers">M2,8 L12,3 22,8 12,13 Z M2,12 L12,17 22,12 M2,16 L12,21 22,16</Geometry>
  <Geometry x:Key="IconDocument">M6,3 H14 L19,8 V21 H6 Z M14,3 V8 H19 M9,12 H16 M9,16 H15</Geometry>
  <Geometry x:Key="IconSidebar">M3,5 H21 V19 H3 Z M9,5 V19</Geometry>
  <Geometry x:Key="IconClose">M6,6 L18,18 M18,6 L6,18</Geometry>

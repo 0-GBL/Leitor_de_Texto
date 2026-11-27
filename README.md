@@ -31,7 +31,7 @@ Desenvolver o Leitor me permitiu transformar essa necessidade em um aplicativo e
 
 ### Biblioteca no tema claro
 
-![Biblioteca 2.0.0 no tema bege com árvore de pastas, pesquisa e cartões de documentos](docs/images/biblioteca-clara-2.0.0.png)
+![Biblioteca 2.1.0 no tema bege com painel ilustrado, pesquisa e cartões de documentos](docs/images/biblioteca-estudos-clara-2.1.0.png)
 
 ### Modo foco no tema escuro
 

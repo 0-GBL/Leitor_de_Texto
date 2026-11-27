@@ -53,11 +53,13 @@ public partial class MainWindow : Window
             return;
         }
         if (vm?.PrepareExport() is {} document)
-            new ExportWindow(document) { Owner = this }.ShowDialog();
+            new ExportWindow(document, vm.Voices, ManageVoicesAsync) { Owner = this }.ShowDialog();
     }
     private void OpenHelp(object sender, RoutedEventArgs e) => new HelpWindow { Owner = this, ShowActivated = IsActive }.ShowDialog();
     private async void ManageVoices(object sender, RoutedEventArgs e)
-    { if (vm == null) return; try { await vm.PrepareVoiceManagementAsync(); new VoiceManager { Owner = this }.ShowDialog(); await vm.ReloadVoicesAsync(); } catch (Exception error) { vm.Status = "Não foi possível abrir os recursos de voz: " + error.Message; } }
+        => await ManageVoicesAsync(this);
+    private async Task ManageVoicesAsync(Window owner)
+    { if (vm == null) return; try { await vm.PrepareVoiceManagementAsync(); new VoiceManager { Owner = owner }.ShowDialog(); await vm.ReloadVoicesAsync(); } catch (Exception error) { vm.Status = "Não foi possível abrir os recursos de voz: " + error.Message; } }
     private void JumpToSegment(object sender, MouseButtonEventArgs e) => vm?.JumpCommand.Execute(null);
     private double seekDuration;
     private void SeekStarted(object? sender, EventArgs e)

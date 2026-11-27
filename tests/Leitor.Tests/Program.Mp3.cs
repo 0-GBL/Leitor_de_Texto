@@ -19,8 +19,73 @@ static partial class Program
             Check(voice != null, "Nenhuma voz Windows");
             MeasureExport(root, "windows", text, options);
         });
-        if (PiperSpeechEngine.Installed && PiperSpeechEngine.Voices().FirstOrDefault() is {} piper)
+        if (PiperSpeechEngine.Installed && PiperSpeechEngine.Voices().FirstOrDefault(v => v.Id == "pt_BR-faber-medium") is {} piper)
+        {
             Run("MP3 Piper: narração local e decodificação", () => MeasureExport(root, "piper", text, options with { Voice = piper }));
+            Run("MP3 Piper: separador sem fonemas, sessão longa e recuperação após cancelar", () =>
+            {
+                var selected = options with { Voice = piper, Speed = 2 };
+                using var session = new PiperSpeechEngine();
+                var silence = session.GenerateAsync("— —", selected, default).GetAwaiter().GetResult();
+                using (var pause = new WaveFileReader(new MemoryStream(silence)))
+                {
+                    byte[] pcm = new byte[checked((int)pause.Length)];
+                    Check(pause.TotalTime.TotalMilliseconds is >= 99 and <= 100 &&
+                        pause.Read(pcm, 0, pcm.Length) == pcm.Length && pcm.All(b => b == 0),
+                        "O separador sem fonemas precisa produzir uma pausa PCM válida");
+                }
+                string extended = string.Join(' ', Enumerable.Repeat("Leitura de dados, ações e índices.", 16));
+                string article = string.Join("\n\n", Enumerable.Range(1, 23).Select(i => i == 11 ? "— —" : $"Aula {i} — “ação”, 3,5% e café."))
+                    + "\n\n" + extended;
+                var segments = TextProcessor.Split(article);
+                var received = new List<string>();
+                var observed = new ExportEngine((part, token) =>
+                {
+                    received.Add(part);
+                    return session.GenerateAsync(part, selected, token);
+                });
+                string destination = Path.Combine(root, "faber-sequencial.mp3");
+                var progress = new ExportProgress();
+                Mp3Export.Export(article, false, selected, destination, observed, progress, default);
+                Check(received.SequenceEqual(segments.Select(segment => segment.Text)) && Mp3Duration(destination) > 20,
+                    "A exportação sequencial alterou a ordem dos trechos ou não produziu MP3 completo");
+                using var cancel = new CancellationTokenSource();
+                var pending = session.GenerateAsync(string.Join(' ', Enumerable.Repeat(extended, 20)), selected, cancel.Token);
+                cancel.Cancel();
+                try { pending.GetAwaiter().GetResult(); throw new Exception("Cancelamento ignorado"); }
+                catch (OperationCanceledException) { }
+                using var recovered = new WaveFileReader(new MemoryStream(
+                    session.GenerateAsync("A narração voltou após o cancelamento.", selected, default).GetAwaiter().GetResult()));
+                Check(recovered.TotalTime.TotalMilliseconds > 300, "O processo Piper não voltou a sintetizar");
+            });
+            Run("MP3 Piper: modelo ausente, modelo inválido e nova tentativa real", () =>
+            {
+                string model = Path.Combine(root, "fake-faber.onnx");
+                string destination = Path.Combine(root, "retry-faber.mp3");
+                var bad = options with { Voice = piper with { Model = model } };
+                void Expect(ExportStage stage)
+                {
+                    try { Mp3Export.ExportAsync(text, false, bad, destination, new ExportProgress(), default).GetAwaiter().GetResult(); throw new Exception("Falha ignorada"); }
+                    catch (Mp3ExportException e) { Check(e.Stage == stage, e.Diagnostic); }
+                    Check(!File.Exists(destination) && !Directory.EnumerateDirectories(root, ".leitor-*").Any(), "Arquivo remanescente");
+                }
+                Expect(ExportStage.VoiceMissing);
+                File.WriteAllText(model, "modelo fictício inválido");
+                File.Copy(piper.Model! + ".json", model + ".json");
+                Expect(ExportStage.Model);
+                string diagnostic = File.ReadAllText(Path.Combine(AppPaths.Root, "diagnostics", "mp3-synthesis.json"));
+                using var report = System.Text.Json.JsonDocument.Parse(diagnostic);
+                var worker = report.RootElement.GetProperty("Worker");
+                Check(worker.GetProperty("Operation").GetString() == "model" &&
+                    !string.IsNullOrWhiteSpace(worker.GetProperty("WorkerType").GetString()) &&
+                    worker.GetProperty("WorkerFrames").GetArrayLength() > 0 &&
+                    !diagnostic.Contains(model, StringComparison.Ordinal) &&
+                    !diagnostic.Contains("Primeira frase", StringComparison.Ordinal),
+                    "Diagnóstico incompleto ou com dados pessoais");
+                Mp3Export.ExportAsync(text, false, options with { Voice = piper }, destination, new ExportProgress(), default).GetAwaiter().GetResult();
+                Check(Mp3Duration(destination) > 2, "Falha na repetição com a voz íntegra");
+            });
+        }
         Run("MP3: destino existente, documento vazio e nome reservado", () =>
         {
             string path = Path.Combine(root, "existente.mp3");

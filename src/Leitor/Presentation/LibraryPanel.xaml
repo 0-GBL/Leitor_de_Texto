@@ -3,26 +3,50 @@
  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
  xmlns:p="clr-namespace:Leitor.Presentation">
  <UserControl.Resources>
-  <p:FolderColorConverter x:Key="FolderColor"/><p:LibraryTileWidth x:Key="TileWidth"/>
+  <BitmapImage x:Key="StudyRoomImage" UriSource="/Leitor;component/Assets/StudyRoom.jpg"/>
+  <ImageBrush x:Key="StudyShelfArtwork" ImageSource="{StaticResource StudyRoomImage}"
+   Viewbox="0,0,1,0.50" ViewboxUnits="RelativeToBoundingBox" Stretch="UniformToFill" AlignmentY="Bottom"/>
+  <ImageBrush x:Key="StudyDeskArtwork" ImageSource="{StaticResource StudyRoomImage}"
+   Viewbox="0,0.56,1,0.44" ViewboxUnits="RelativeToBoundingBox" Stretch="Fill"/>
+  <p:FolderPalette x:Key="FolderPalette"/><p:LibraryTileWidth x:Key="TileWidth"/>
   <Style x:Key="LibraryIcon" TargetType="p:AppIcon">
-   <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+   <Setter Property="Foreground">
+    <Setter.Value>
+     <MultiBinding Converter="{StaticResource FolderPalette}">
+      <Binding Path="Visual"/>
+      <Binding Path="DataContext.Settings.Dark" RelativeSource="{RelativeSource AncestorType=p:LibraryPanel}"/>
+     </MultiBinding>
+    </Setter.Value>
+   </Setter>
    <Style.Triggers>
-    <DataTrigger Binding="{Binding Icon}" Value="LibraryFolder"><Setter Property="Foreground" Value="{DynamicResource FolderBrush}"/></DataTrigger><DataTrigger Binding="{Binding HasColor}" Value="True">
-     <Setter Property="Foreground" Value="{Binding Color, Converter={StaticResource FolderColor}}"/>
-    </DataTrigger>
+    <DataTrigger Binding="{Binding Visual}" Value="{x:Null}"><Setter Property="Foreground" Value="{DynamicResource TextBrush}"/></DataTrigger>
    </Style.Triggers>
   </Style>
  </UserControl.Resources>
  <Grid>
   <Grid.ColumnDefinitions><ColumnDefinition x:Name="LibraryColumn" Width="280" MinWidth="200" MaxWidth="520"/><ColumnDefinition x:Name="SidebarGap" Width="12"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-  <Border x:Name="FolderSidebar" Style="{StaticResource Card}" Padding="10">
+  <Border x:Name="FolderSidebar" Style="{StaticResource Card}" Background="{DynamicResource StudyPanelBrush}"
+   Padding="0" SizeChanged="SidebarSizeChanged">
    <DockPanel>
-    <Button DockPanel.Dock="Top" DataContext="{Binding Breadcrumbs[0]}" Click="NavigateCrumb" AllowDrop="True"
-      DragOver="DragOverFolder" Drop="DropCrumb" Style="{StaticResource QuietButton}" AutomationProperties.Name="Raiz da biblioteca"
-      Margin="0,0,0,8">
-     <StackPanel Orientation="Horizontal"><p:AppIcon Kind="Book" Width="19" Height="19" Margin="0,0,8,0"/><TextBlock Text="Biblioteca"/></StackPanel>
-    </Button>
-    <ListBox x:Name="FolderTree" ItemsSource="{Binding FolderRows}" SelectedItem="{Binding SelectedFolder}"
+    <Grid DockPanel.Dock="Top" Margin="0,0,0,8">
+     <Border x:Name="StudyHeader" Height="106" CornerRadius="15,15,0,0"
+      Background="{StaticResource StudyShelfArtwork}" IsHitTestVisible="False"/>
+     <Button x:Name="SidebarHome" DataContext="{Binding Breadcrumbs[0]}" Click="NavigateCrumb" AllowDrop="True"
+       DragOver="DragOverFolder" Drop="DropCrumb" Style="{StaticResource QuietButton}" AutomationProperties.Name="Raiz da biblioteca"
+       HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,10,0">
+      <StackPanel Orientation="Horizontal">
+       <p:AppIcon Kind="Book" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+        Width="23" Height="23" Margin="0,0,8,0"/>
+       <StackPanel>
+        <TextBlock Text="Biblioteca" FontSize="18" FontWeight="SemiBold"/>
+        <TextBlock x:Name="StudySubtitle" Text="Seu espaço de estudos" FontSize="11" Margin="0,2,0,0"/>
+       </StackPanel>
+      </StackPanel>
+     </Button>
+    </Grid>
+    <Border x:Name="StudyIllustration" DockPanel.Dock="Bottom" Height="96" CornerRadius="0,0,15,15" Margin="0,8,0,0"
+      Background="{StaticResource StudyDeskArtwork}" IsHitTestVisible="False"/>
+    <ListBox x:Name="FolderTree" ItemsSource="{Binding FolderRows}" SelectedItem="{Binding SelectedFolder}" Margin="10,0"
      AutomationProperties.Name="Árvore de pastas" GotKeyboardFocus="TreeFocus" PreviewKeyDown="FolderKey" PreviewMouseRightButtonDown="SelectContext"
      PreviewMouseLeftButtonDown="BeginDrag" MouseMove="DragItem" AllowDrop="True" DragOver="DragOverFolder" Drop="DropFolder"
      VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling"
@@ -30,17 +54,47 @@
      <ListBox.ContextMenu><ContextMenu Opened="TreeMenuOpened"/></ListBox.ContextMenu>
      <ListBox.ItemContainerStyle>
       <Style TargetType="ListBoxItem" BasedOn="{StaticResource {x:Type ListBoxItem}}">
-       <Setter Property="Padding" Value="4,5"/><Setter Property="Margin" Value="0,0,0,2"/>
+       <Setter Property="Padding" Value="7,6"/>
+       <Setter Property="Margin" Value="0,0,0,7"/>
+       <Setter Property="Template">
+        <Setter.Value>
+         <ControlTemplate TargetType="ListBoxItem">
+          <Border x:Name="FolderCard" Background="{DynamicResource StudyFolderBrush}" BorderBrush="Transparent"
+           BorderThickness="1" CornerRadius="9" Padding="{TemplateBinding Padding}">
+           <ContentPresenter/>
+          </Border>
+          <ControlTemplate.Triggers>
+           <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="FolderCard" Property="Background" Value="{DynamicResource HoverBrush}"/></Trigger>
+           <Trigger Property="IsSelected" Value="True">
+            <Setter TargetName="FolderCard" Property="Background" Value="{DynamicResource SelectionBrush}"/>
+            <Setter TargetName="FolderCard" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+           </Trigger>
+           <Trigger Property="IsKeyboardFocusWithin" Value="True"><Setter TargetName="FolderCard" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/></Trigger>
+          </ControlTemplate.Triggers>
+         </ControlTemplate>
+        </Setter.Value>
+       </Setter>
        <Setter Property="AutomationProperties.Name" Value="{Binding Label}"/>
       </Style>
      </ListBox.ItemContainerStyle>
      <ListBox.ItemTemplate>
       <DataTemplate>
-       <DockPanel Margin="{Binding Indent}">
-        <Button Content="{Binding Expander}" Click="ExpandFolder" IsEnabled="{Binding HasChildren}" Style="{StaticResource QuietButton}"
-         AutomationProperties.Name="{Binding ExpansionLabel}" Padding="2" MinWidth="23" MinHeight="25" Margin="0,0,4,0"/>
-        <p:AppIcon Kind="{Binding Icon}" Style="{StaticResource LibraryIcon}" Width="21" Height="21" Margin="0,0,7,0"/>
-        <TextBlock Text="{Binding Label}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" ToolTip="{Binding Label}"/>
+       <DockPanel Margin="{Binding Indent}" LastChildFill="True">
+        <Button DockPanel.Dock="Right" Content="{Binding Expander}" Click="ExpandFolder" IsEnabled="{Binding HasChildren}" Style="{StaticResource QuietButton}"
+         AutomationProperties.Name="{Binding ExpansionLabel}" Padding="2" MinWidth="21" MinHeight="26" Margin="0"/>
+        <Border Width="36" Height="36" CornerRadius="9" Margin="0,0,10,0">
+         <Border.Background>
+          <MultiBinding Converter="{StaticResource FolderPalette}" ConverterParameter="badge">
+           <Binding Path="Visual"/>
+           <Binding Path="DataContext.Settings.Dark" RelativeSource="{RelativeSource AncestorType=p:LibraryPanel}"/>
+          </MultiBinding>
+         </Border.Background>
+         <p:AppIcon Kind="{Binding Icon}" Style="{StaticResource LibraryIcon}" Width="23" Height="23"/>
+        </Border>
+        <StackPanel VerticalAlignment="Center" ToolTip="{Binding Label}">
+         <TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+         <TextBlock Text="{Binding Count, StringFormat={}{0} texto(s)}" FontSize="11" Foreground="{DynamicResource MutedBrush}"/>
+        </StackPanel>
        </DockPanel>
       </DataTemplate>
      </ListBox.ItemTemplate>
@@ -164,9 +218,27 @@
       <DataTemplate>
        <Grid ToolTip="{Binding Tooltip}">
         <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-        <p:AppIcon Kind="{Binding Icon}" Style="{StaticResource LibraryIcon}" Margin="0,0,12,0"
-          Width="{Binding DataContext.LibraryIconSize,RelativeSource={RelativeSource AncestorType=ListBox}}"
-          Height="{Binding Width, RelativeSource={RelativeSource Self}}"/>
+        <Border CornerRadius="8" Margin="0,0,12,0" VerticalAlignment="Center">
+         <Border.Style>
+          <Style TargetType="Border">
+           <Setter Property="Padding" Value="4"/>
+           <Setter Property="Background">
+            <Setter.Value>
+             <MultiBinding Converter="{StaticResource FolderPalette}" ConverterParameter="badge">
+              <Binding Path="Visual"/>
+              <Binding Path="DataContext.Settings.Dark" RelativeSource="{RelativeSource AncestorType=p:LibraryPanel}"/>
+             </MultiBinding>
+            </Setter.Value>
+           </Setter>
+           <Style.Triggers>
+            <DataTrigger Binding="{Binding Visual}" Value="{x:Null}"><Setter Property="Padding" Value="0"/></DataTrigger>
+           </Style.Triggers>
+          </Style>
+         </Border.Style>
+         <p:AppIcon Kind="{Binding Icon}" Style="{StaticResource LibraryIcon}"
+           Width="{Binding DataContext.LibraryIconSize,RelativeSource={RelativeSource AncestorType=ListBox}}"
+           Height="{Binding Width, RelativeSource={RelativeSource Self}}"/>
+        </Border>
         <StackPanel Grid.Column="1" VerticalAlignment="Center">
          <TextBlock Text="{Binding Name}" FontSize="15" LineHeight="20" FontWeight="SemiBold" TextWrapping="Wrap" ToolTip="{Binding Name}"/>
          <TextBlock Text="{Binding Detail}" FontSize="12" Foreground="{DynamicResource MutedBrush}"/>

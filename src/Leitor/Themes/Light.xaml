@@ -5,7 +5,8 @@
  <SolidColorBrush x:Key="MutedBrush" Color="#75685A"/>
  <SolidColorBrush x:Key="BorderBrush" Color="#DED0BD"/>
  <SolidColorBrush x:Key="AccentBrush" Color="#79583D"/>
- <SolidColorBrush x:Key="FolderBrush" Color="#AE731C"/>
+ <SolidColorBrush x:Key="StudyPanelBrush" Color="#FCF8F1"/>
+ <SolidColorBrush x:Key="StudyFolderBrush" Color="#F6EDDF"/>
  <SolidColorBrush x:Key="HighlightBrush" Color="#F5DDA0"/>
  <SolidColorBrush x:Key="BufferedBrush" Color="#DCC49D"/>
  <SolidColorBrush x:Key="InputTextBrush" Color="#302820"/>

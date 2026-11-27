@@ -6,21 +6,19 @@ using Leitor.Services;
 using Leitor.Presentation;
 
 namespace Leitor.ViewModels;
-public sealed record FolderRow(string Id,string Name,string? ParentId,int Depth,int Count,bool Expanded,bool HasChildren,string? Color=null)
+public sealed record FolderRow(string Id,string Name,string? ParentId,int Depth,int Count,bool Expanded,bool HasChildren,FolderVisual Visual)
 {
     public Thickness Indent=>new(Math.Min(Depth*12,72),0,0,0);
-    public string Icon=>"LibraryFolder";
+    public string Icon => Visual.Icon;
     public string Expander=>HasChildren?(Expanded?"▾":"▸"):"";
     public string ExpansionLabel=>HasChildren?$"{(Expanded?"Recolher":"Expandir")} {Name}":$"Sem subpastas em {Name}";
     public string Label=>$"{Name} ({Count})";
-    public bool HasColor => Color != null;
 }
-public sealed record LibraryEntry(LibraryFolder? Folder, Document? Document, string? Color)
+public sealed record LibraryEntry(LibraryFolder? Folder, Document? Document, FolderVisual? Visual)
 {
     public string Id => Folder?.Id ?? Document!.Id;
     public string Name => Folder?.Name ?? Document!.Title;
-    public string Icon => Folder != null ? "LibraryFolder" : Document!.Protected ? "Shield" : "Document";
-    public bool HasColor => Color != null;
+    public string Icon => Visual?.Icon ?? (Document?.Protected == true ? "Shield" : "Document");
     public string Detail => Document switch
     {
         { IsUnavailable: true } unavailable => unavailable.ProtectionStatus,
@@ -41,6 +39,7 @@ public sealed partial class MainViewModel
     private int page,totalDocuments;
     private bool libraryBusy;
     private List<LibraryFolder> folderData=[];
+    private readonly Dictionary<string, FolderVisual> folderVisuals = [];
     private Dictionary<string,int> folderCounts=[];
     private List<Document> documents = [];
     private FolderRow? selectedFolder;
@@ -180,7 +179,9 @@ public sealed partial class MainViewModel
         if (id != null && !FolderRows.Any(row => row.Id == id))
         {
             var folder = folderData.First(f => f.Id == id);
-            SelectedFolder = new(folder.Id, folder.Name, folder.ParentId, 0, 0, false, false);
+            var visual = folderVisuals.GetValueOrDefault(folder.Id)
+                ?? FolderAppearanceCatalog.Resolve(folder.Name, folder.Appearance, null);
+            SelectedFolder = new(folder.Id, folder.Name, folder.ParentId, 0, 0, false, false, visual);
             RebuildFolderRows();
         }
         else SelectedFolder = FolderRows.FirstOrDefault(f => f.Id == id);
@@ -228,20 +229,23 @@ public sealed partial class MainViewModel
             term.Length == 0 ? browsing && folder.ParentId == SelectedFolder?.Id
                              : (scoped == null || scoped.Contains(folder.Id)) && folder.Name.Contains(term, StringComparison.CurrentCultureIgnoreCase));
         var previous = SelectedEntry;
-        Entries = folders.Select(folder => new LibraryEntry(folder, null, Settings.FolderColors.GetValueOrDefault(folder.Id)))
+        Entries = folders.Select(folder => new LibraryEntry(folder, null, folderVisuals.GetValueOrDefault(folder.Id)
+                ?? FolderAppearanceCatalog.Resolve(folder.Name, folder.Appearance, null)))
             .Concat(Documents.Where(document => !browsing || document.FolderId == SelectedFolder?.Id)
                 .Select(document => new LibraryEntry(null, document, null))).ToList();
         Raise(nameof(Entries));
         SelectedEntry = Entries.FirstOrDefault(entry => entry.Id == previous?.Id && (entry.Folder != null) == (previous?.Folder != null));
         Raise(nameof(ExplorerEmpty));
     }
-    public void ColorSelectedFolder(string? color)
+    internal LibraryFolder? FolderToCustomize => FolderContext ? TargetFolder : null;
+
+    internal FolderVisual? ParentFolderVisual(LibraryFolder folder) =>
+        folder.ParentId is string parent ? folderVisuals.GetValueOrDefault(parent) : null;
+
+    internal async Task CustomizeFolderAsync(string id, FolderAppearance appearance)
     {
-        if (TargetFolder is not {} folder || !FolderContext) return;
-        if (color == null) Settings.FolderColors.Remove(folder.Id);
-        else Settings.FolderColors[folder.Id] = color;
-        RebuildFolderRows();
-        SavePreferences();
+        await Task.Run(() => library.SaveFolderAppearance(id, appearance));
+        await RefreshFoldersAsync();
     }
     private async Task RefreshFoldersAsync()
     {
@@ -256,10 +260,17 @@ public sealed partial class MainViewModel
         var children=folderData.ToLookup(f=>f.ParentId??"");var expanded=Settings.ExpandedFolderIds.ToHashSet();
         var map=folderData.ToDictionary(f=>f.Id);var ancestors=new HashSet<string>();string? selected=Settings.SelectedFolderId;if(selected!=null&&!map.ContainsKey(selected))Settings.SelectedFolderId=null;while(selected!=null&&ancestors.Add(selected)&&map.TryGetValue(selected,out var item)){if(item.ParentId!=null)expanded.Add(item.ParentId);selected=item.ParentId;}Settings.ExpandedFolderIds=expanded.ToList();
         var aggregate=new Dictionary<string,int>(folderCounts);var order=new List<LibraryFolder>();var scan=new Stack<LibraryFolder>(children[""].Reverse());var seen=new HashSet<string>();
-        while(scan.TryPop(out var f)){if(!seen.Add(f.Id))continue;order.Add(f);foreach(var child in children[f.Id])scan.Push(child);}
+        folderVisuals.Clear();
+        while (scan.TryPop(out var folder))
+        {
+            if (!seen.Add(folder.Id)) continue;
+            order.Add(folder);
+            folderVisuals[folder.Id] = FolderAppearanceCatalog.Resolve(folder.Name, folder.Appearance, ParentFolderVisual(folder));
+            foreach (var child in children[folder.Id]) scan.Push(child);
+        }
         for(int i=order.Count-1;i>=0;i--)if(order[i].ParentId is string parent)aggregate[parent]=aggregate.GetValueOrDefault(parent)+aggregate.GetValueOrDefault(order[i].Id);
         var rows=new List<FolderRow>();var stack=new Stack<(LibraryFolder Folder,int Depth)>();foreach(var f in children[""].Reverse())stack.Push((f,0));seen.Clear();
-        while(stack.TryPop(out var entry)){var f=entry.Folder;if(!seen.Add(f.Id))continue;rows.Add(new(f.Id,f.Name,f.ParentId,entry.Depth,aggregate.GetValueOrDefault(f.Id),expanded.Contains(f.Id),children[f.Id].Any(),Settings.FolderColors.GetValueOrDefault(f.Id)));if(expanded.Contains(f.Id))foreach(var child in children[f.Id].Reverse())stack.Push((child,entry.Depth+1));}
+        while(stack.TryPop(out var entry)){var f=entry.Folder;if(!seen.Add(f.Id))continue;rows.Add(new(f.Id,f.Name,f.ParentId,entry.Depth,aggregate.GetValueOrDefault(f.Id),expanded.Contains(f.Id),children[f.Id].Any(),folderVisuals[f.Id]));if(expanded.Contains(f.Id))foreach(var child in children[f.Id].Reverse())stack.Push((child,entry.Depth+1));}
         treeUpdating=true;try{FolderRows.Clear();foreach(var row in rows)FolderRows.Add(row);SelectedFolder=rows.FirstOrDefault(r=>r.Id==Settings.SelectedFolderId);}finally{treeUpdating=false;}
         UpdateExplorer();
     }
@@ -318,12 +329,7 @@ public sealed partial class MainViewModel
         await storageGate.WaitAsync();
         try
         {
-            if (folder && copy)
-            {
-                var copies = await Task.Run(() => library.CopyFolder(id, destination));
-                foreach (var (source, target) in copies)
-                    if (Settings.FolderColors.TryGetValue(source, out var color)) Settings.FolderColors[target] = color;
-            }
+            if (folder && copy) await Task.Run(() => library.CopyFolder(id, destination));
             else if (folder) await Task.Run(() => library.MoveFolder(id, destination));
             else if (copy) await Task.Run(() => library.CopyDocument(id, destination));
             else
@@ -344,8 +350,6 @@ public sealed partial class MainViewModel
         var impact=await Task.Run(()=>library.Impact(folder.Id));int action=OrganizationDialogs.DeleteFolder(folder.Name,impact);if(action==0)return;
         if(action==2&&MessageBox.Show($"Excluir definitivamente {impact.Documents} documentos e {impact.Subfolders} subpastas?","Excluir todo o conteúdo",MessageBoxButton.YesNo,MessageBoxImage.Warning)!=MessageBoxResult.Yes)return;
         await storageGate.WaitAsync();try{await Task.Run(()=>library.DeleteFolder(folder.Id,action==2,impact));var existing=await Task.Run(()=>library.Get(current.Id));if(existing==null&&hasSavedCurrent){await Player.LoadAsync([]);SetDocument(new());}else if(existing!=null)current.FolderId=existing.FolderId;if(Settings.SelectedFolderId==folder.Id)Settings.SelectedFolderId=folder.ParentId;}finally{storageGate.Release();}await ReloadLibraryAsync();
-        var existingFolders = folderData.Select(item => item.Id).ToHashSet();
-        foreach (var id in Settings.FolderColors.Keys.Where(id => !existingFolders.Contains(id)).ToList()) Settings.FolderColors.Remove(id);
         SavePreferences();
     }
     public void ApplyEditorStatistics(string text,ICollection<TextChange> changes)

@@ -11,6 +11,72 @@ static partial class Program
 {
     private static void RunLibraryTests(string root)
     {
+        Run("Biblioteca 2.1: ícones, migração de cores e hierarquia persistente", () =>
+        {
+            var examples = new Dictionary<string, string>
+            {
+                ["FACULDADE"] = "Education", ["5º Período"] = "Calendar",
+                ["Tópicos de Big Data"] = "Database", ["Fundamentos da Programação"] = "Programming",
+                ["Livros"] = "Book", ["Organização"] = "Layers", ["Documentos"] = "Document",
+                ["Módulo 1"] = "LibraryFolder"
+            };
+            Check(examples.All(item => FolderAppearanceCatalog.Suggest(item.Key).Icon == item.Value) &&
+                FolderAppearanceCatalog.Colors.Count == 6, "Catálogo ou regras locais divergiram");
+
+            string path = Path.Combine(root, "folder-appearance");
+            using var vault = new Vault(path);
+            var store = new LibraryStore(path, vault);
+            string parent = store.CreateFolder("Faculdade"), child = store.CreateFolder("5º Período", parent);
+            string grandchild = store.CreateFolder("Big Data", child), destination = store.CreateFolder("Programação");
+            var document = new Document { Title = "Material", Content = "Texto fictício", Offset = 5, FolderId = child };
+            store.Save(document);
+            new SettingsStore(path).Save(new() { FolderColors = new() { [parent] = "#3D865F", ["ausente"] = "#477FB7" } });
+            using (var connection = new SqliteConnection($"Data Source={Path.Combine(path, "library.db")}"))
+            {
+                connection.Open();
+                using var command = connection.CreateCommand();
+                command.CommandText = "DROP TABLE folder_appearance";
+                command.ExecuteNonQuery();
+            }
+            store = new LibraryStore(path, vault);
+            Check(store.MigrationBackup != null && store.Folders().Find(item => item.Id == parent)?.Appearance.Color == "green",
+                "Migração não preservou a preferência antiga");
+            Check(store.Get(document.Id) is { Offset: 5, Content: "Texto fictício" } saved && saved.FolderId == child,
+                "Migração alterou documento, progresso ou pasta");
+
+            store.SaveFolderAppearance(destination, new(Color: "purple"));
+            store.SaveFolderAppearance(child, new("Calendar", FolderAppearance.Inherit));
+            store.SaveFolderAppearance(grandchild, new(Color: FolderAppearance.Inherit));
+            FolderVisual Resolve(string id)
+            {
+                var map = store.Folders().ToDictionary(item => item.Id);
+                FolderVisual Visit(string key)
+                {
+                    var folder = map[key];
+                    return FolderAppearanceCatalog.Resolve(folder.Name, folder.Appearance,
+                        folder.ParentId is string owner ? Visit(owner) : null);
+                }
+                return Visit(id);
+            }
+            Check(Resolve(grandchild) == new FolderVisual("Database", "green", 2), "Herança inicial incorreta");
+            store.SaveFolderAppearance(parent, new(Color: "red"));
+            Check(Resolve(grandchild).Color == "red", "Alteração da raiz não chegou ao segundo nível");
+            store.MoveFolder(child, destination);
+            store.RenameFolder(child, "Nova identificação");
+            store = new LibraryStore(path, vault);
+            Check(store.MigrationBackup == null && Resolve(child) == new FolderVisual("Calendar", "purple", 1) &&
+                Resolve(grandchild).Color == "purple", "Mover ou renomear perdeu a personalização");
+            store.SaveFolderAppearance(grandchild, new("Book", "orange"));
+            store.MoveFolder(child, null);
+            Check(Resolve(grandchild) == new FolderVisual("Book", "orange"), "Cor e ícone manuais mudaram ao mover");
+            Check(Resolve(child) == new FolderVisual("Calendar", "yellow"), "Herança na raiz não usou cor sugerida");
+            var duplicate = store.CopyFolder(child, destination);
+            Check(Resolve(duplicate[grandchild]) == new FolderVisual("Book", "orange") &&
+                Resolve(duplicate[child]).Color == "purple", "Cópia perdeu ícone ou modo de cor");
+            store.SaveFolderAppearance(parent, FolderAppearance.Suggested);
+            store = new LibraryStore(path, vault);
+            Check(Resolve(parent).Color == "purple", "O valor legado ressurgiu após restaurar");
+        });
         Run("Biblioteca 2.0: navegação direta e documentos recentes respeitam o PIN", () =>
         {
             string dir = Path.Combine(root, "explorer");
